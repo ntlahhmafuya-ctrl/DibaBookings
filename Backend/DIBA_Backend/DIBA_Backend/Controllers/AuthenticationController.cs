@@ -96,6 +96,11 @@ namespace DIBA_Backend.Controllers
                 return Unauthorized("Invalid credentials");
             }
 
+            if (!user.IsActive)
+            {
+                return Unauthorized("This account has been deactivated.");
+            }
+
             // Verify password
             if (!BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
             {

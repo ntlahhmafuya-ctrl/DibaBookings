@@ -26,6 +26,10 @@ namespace DIBA_Backend.Controllers
         public async Task<IActionResult> GetBookings()
         {
             var bookings = await dbContext.Bookings
+                .Include(b => b.User)
+                .Include(b => b.Event)
+                .Include(b => b.Venue)
+                .Include(b => b.BookingStatus)
                 .Select(b => new BookingResponseDto
                 {
                     BookingId = b.BookingId,
@@ -37,7 +41,11 @@ namespace DIBA_Backend.Controllers
                     UserId = b.UserId,
                     EventId = b.EventId,
                     VenueId = b.VenueId,
-                    BookingStatusId = b.BookingStatusId
+                    BookingStatusId = b.BookingStatusId,
+                    StatusName = b.BookingStatus != null ? b.BookingStatus.StatusName : string.Empty,
+                    OrganiserName = b.User != null ? b.User.FirstName + " " + b.User.LastName : string.Empty,
+                    EventName = b.Event != null ? b.Event.EventName : string.Empty,
+                    VenueName = b.Venue != null ? b.Venue.VenueName : string.Empty
                 })
                 .ToListAsync();
 
@@ -49,6 +57,10 @@ namespace DIBA_Backend.Controllers
         public async Task<IActionResult> GetBooking(Guid id)
         {
             var booking = await dbContext.Bookings
+                .Include(b => b.User)
+                .Include(b => b.Event)
+                .Include(b => b.Venue)
+                .Include(b => b.BookingStatus)
                 .FirstOrDefaultAsync(b => b.BookingId == id);
 
             if (booking == null)
@@ -67,7 +79,11 @@ namespace DIBA_Backend.Controllers
                 UserId = booking.UserId,
                 EventId = booking.EventId,
                 VenueId = booking.VenueId,
-                BookingStatusId = booking.BookingStatusId
+                BookingStatusId = booking.BookingStatusId,
+                StatusName = booking.BookingStatus?.StatusName ?? string.Empty,
+                OrganiserName = booking.User == null ? string.Empty : booking.User.FirstName + " " + booking.User.LastName,
+                EventName = booking.Event?.EventName ?? string.Empty,
+                VenueName = booking.Venue?.VenueName ?? string.Empty
             };
 
             return Ok(response);

@@ -70,7 +70,8 @@ namespace DIBA_Backend.Controllers
                     Email = u.Email,
                     Role = u.Role != null
                         ? u.Role.RoleName
-                        : string.Empty
+                        : string.Empty,
+                    IsActive = u.IsActive
                 })
                 .ToListAsync();
 

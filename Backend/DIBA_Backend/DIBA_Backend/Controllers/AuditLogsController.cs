@@ -24,6 +24,7 @@ namespace DIBA_Backend.Controllers
         public async Task<IActionResult> GetAuditLogs()
         {
             var auditLogs = await dbContext.AuditLogs
+                .Include(a => a.User)
                 .OrderByDescending(a => a.Timestamp)
                 .Select(a => new AuditLogResponseDto
                 {
@@ -31,7 +32,8 @@ namespace DIBA_Backend.Controllers
                     Action = a.Action,
                     LogDescription = a.LogDescription,
                     Timestamp = a.Timestamp,
-                    UserId = a.UserId
+                    UserId = a.UserId,
+                    UserName = a.User == null ? string.Empty : a.User.FirstName + " " + a.User.LastName
                 })
                 .ToListAsync();
 
@@ -43,6 +45,7 @@ namespace DIBA_Backend.Controllers
         public async Task<IActionResult> GetAuditLog(Guid id)
         {
             var auditLog = await dbContext.AuditLogs
+                .Include(a => a.User)
                 .FirstOrDefaultAsync(a => a.AuditLogId == id);
 
             if (auditLog == null)
@@ -56,7 +59,8 @@ namespace DIBA_Backend.Controllers
                 Action = auditLog.Action,
                 LogDescription = auditLog.LogDescription,
                 Timestamp = auditLog.Timestamp,
-                UserId = auditLog.UserId
+                UserId = auditLog.UserId,
+                UserName = auditLog.User == null ? string.Empty : auditLog.User.FirstName + " " + auditLog.User.LastName
             };
 
             return Ok(response);
