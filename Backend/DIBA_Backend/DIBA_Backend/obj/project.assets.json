@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 3,
   "targets": {
     "net8.0": {
       "Azure.Core/1.35.0": {
@@ -4232,23 +4232,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\s226083470\\.nuget\\packages\\": {},
+    "C:\\Users\\Ntlahla\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\s226083470\\Downloads\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\DIBA_Backend.csproj",
+      "projectUniqueName": "C:\\Users\\Ntlahla\\Source\\Repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\DIBA_Backend.csproj",
       "projectName": "DIBA_Backend",
-      "projectPath": "C:\\Users\\s226083470\\Downloads\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\DIBA_Backend.csproj",
-      "packagesPath": "C:\\Users\\s226083470\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\s226083470\\Downloads\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\obj\\",
+      "projectPath": "C:\\Users\\Ntlahla\\Source\\Repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\DIBA_Backend.csproj",
+      "packagesPath": "C:\\Users\\Ntlahla\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Ntlahla\\Source\\Repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\s226083470\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Ntlahla\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -4262,7 +4262,6 @@
       },
       "frameworks": {
         "net8.0": {
-          "framework": "net8.0",
           "targetAlias": "net8.0",
           "projectReferences": {}
         }
@@ -4277,11 +4276,10 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "10.0.300"
+      "SdkAnalysisLevel": "9.0.300"
     },
     "frameworks": {
       "net8.0": {
-        "framework": "net8.0",
         "targetAlias": "net8.0",
         "dependencies": {
           "BCrypt.Net-Next": {
@@ -4326,7 +4324,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.317/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

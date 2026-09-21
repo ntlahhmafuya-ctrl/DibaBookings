@@ -1,5 +1,6 @@
 ﻿using DIBA_Backend.Data;
 using DIBA_Backend.Dto.Event;
+using DIBA_Backend.Dto.Booking;
 using DIBA_Backend.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -25,7 +26,15 @@ namespace DIBA_Backend.Controllers
         [HttpGet]
         public async Task<IActionResult> GetEvents()
         {
-            var events = await dbContext.Events
+            var eventsQuery = dbContext.Events.AsQueryable();
+            if (!User.IsInRole("Staff") && !User.IsInRole("Administrator"))
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId)) return Unauthorized("User ID could not be determined.");
+                eventsQuery = eventsQuery.Where(e => e.UserId == userId);
+            }
+
+            var events = await eventsQuery
                 .Select(e => new EventResponseDto
                 {
                     EventId = e.EventId,
@@ -53,6 +62,12 @@ namespace DIBA_Backend.Controllers
             if (eventEntity == null)
             {
                 return NotFound("Event not found.");
+            }
+
+            if (!User.IsInRole("Staff") && !User.IsInRole("Administrator"))
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId) || eventEntity.UserId != userId) return Forbid();
             }
 
             var response = new EventResponseDto
@@ -132,6 +147,99 @@ namespace DIBA_Backend.Controllers
             };
 
             return Ok(response);
+        }
+
+        [HttpPost("with-booking")]
+        [Authorize(Roles = "Event Organiser")]
+        public async Task<IActionResult> CreateEventWithBooking(CreateEventWithBookingDto request)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId)) return Unauthorized("User ID could not be determined.");
+            if (request.EndDateTime <= request.StartDateTime) return BadRequest("End date and time must be after the start date and time.");
+
+            var venue = await dbContext.Venues.FirstOrDefaultAsync(v => v.VenueId == request.VenueId);
+            if (venue == null) return NotFound("Venue not found.");
+            if (!venue.VenueStatus.Equals("Available", StringComparison.OrdinalIgnoreCase)) return BadRequest("The selected venue is not currently available.");
+
+            var hasConflict = await dbContext.Bookings.AnyAsync(b =>
+                b.VenueId == request.VenueId &&
+                b.StartDateTime < request.EndDateTime &&
+                b.EndDateTime > request.StartDateTime &&
+                b.BookingStatus != null &&
+                (b.BookingStatus.StatusName == "Pending" || b.BookingStatus.StatusName == "Approved"));
+            if (hasConflict) return Conflict("The selected venue is already booked or awaiting approval for the requested time.");
+
+            var pendingStatus = await dbContext.BookingStatuses.FirstOrDefaultAsync(bs => bs.StatusName == "Pending");
+            if (pendingStatus == null) return StatusCode(500, "Pending booking status could not be found.");
+
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
+            try
+            {
+                var eventEntity = new Event
+                {
+                    EventId = Guid.NewGuid(),
+                    EventName = request.EventName,
+                    EventDescription = request.EventDescription,
+                    EventType = request.EventType,
+                    EventAttendance = request.EventAttendance,
+                    StartDateTime = request.StartDateTime,
+                    EndDateTime = request.EndDateTime,
+                    VenueId = request.VenueId,
+                    UserId = userId
+                };
+                var booking = new Models.Entities.Booking
+                {
+                    BookingId = Guid.NewGuid(),
+                    BookingDate = DateTime.UtcNow,
+                    StartDateTime = request.StartDateTime,
+                    EndDateTime = request.EndDateTime,
+                    SpecialRequirements = request.SpecialRequirements,
+                    UserId = userId,
+                    EventId = eventEntity.EventId,
+                    VenueId = request.VenueId,
+                    BookingStatusId = pendingStatus.BookingStatusId
+                };
+                dbContext.Events.Add(eventEntity);
+                dbContext.Bookings.Add(booking);
+                await dbContext.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return Ok(new
+                {
+                    Event = new EventResponseDto
+                    {
+                        EventId = eventEntity.EventId,
+                        EventName = eventEntity.EventName,
+                        EventDescription = eventEntity.EventDescription,
+                        EventType = eventEntity.EventType,
+                        EventAttendance = eventEntity.EventAttendance,
+                        StartDateTime = eventEntity.StartDateTime,
+                        EndDateTime = eventEntity.EndDateTime,
+                        VenueId = eventEntity.VenueId,
+                        UserId = eventEntity.UserId
+                    },
+                    Booking = new BookingResponseDto
+                    {
+                        BookingId = booking.BookingId,
+                        BookingDate = booking.BookingDate,
+                        StartDateTime = booking.StartDateTime,
+                        EndDateTime = booking.EndDateTime,
+                        SpecialRequirements = booking.SpecialRequirements,
+                        UserId = booking.UserId,
+                        EventId = booking.EventId,
+                        VenueId = booking.VenueId,
+                        BookingStatusId = booking.BookingStatusId,
+                        StatusName = pendingStatus.StatusName,
+                        EventName = eventEntity.EventName,
+                        VenueName = venue.VenueName
+                    }
+                });
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         // PUT: api/Events/{id}

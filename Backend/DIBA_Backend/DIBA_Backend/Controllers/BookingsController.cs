@@ -25,7 +25,15 @@ namespace DIBA_Backend.Controllers
         [HttpGet]
         public async Task<IActionResult> GetBookings()
         {
-            var bookings = await dbContext.Bookings
+            var bookingsQuery = dbContext.Bookings.AsQueryable();
+            if (!User.IsInRole("Staff") && !User.IsInRole("Administrator"))
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId)) return Unauthorized("User ID could not be determined.");
+                bookingsQuery = bookingsQuery.Where(b => b.UserId == userId);
+            }
+
+            var bookings = await bookingsQuery
                 .Include(b => b.User)
                 .Include(b => b.Event)
                 .Include(b => b.Venue)
@@ -68,6 +76,12 @@ namespace DIBA_Backend.Controllers
                 return NotFound("Booking not found.");
             }
 
+            if (!User.IsInRole("Staff") && !User.IsInRole("Administrator"))
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId) || booking.UserId != userId) return Forbid();
+            }
+
             var response = new BookingResponseDto
             {
                 BookingId = booking.BookingId,
@@ -87,6 +101,23 @@ namespace DIBA_Backend.Controllers
             };
 
             return Ok(response);
+        }
+
+        [HttpGet("availability")]
+        public async Task<IActionResult> CheckAvailability(Guid venueId, DateTime startDateTime, DateTime endDateTime)
+        {
+            if (endDateTime <= startDateTime) return BadRequest("End date and time must be after the start date and time.");
+            var venue = await dbContext.Venues.FirstOrDefaultAsync(v => v.VenueId == venueId);
+            if (venue == null) return NotFound("Venue not found.");
+            if (!venue.VenueStatus.Equals("Available", StringComparison.OrdinalIgnoreCase)) return Ok(new { available = false, reason = "The selected venue is not currently available." });
+
+            var conflict = await dbContext.Bookings.AnyAsync(b =>
+                b.VenueId == venueId &&
+                b.StartDateTime < endDateTime &&
+                b.EndDateTime > startDateTime &&
+                b.BookingStatus != null &&
+                (b.BookingStatus.StatusName == "Pending" || b.BookingStatus.StatusName == "Approved"));
+            return Ok(new { available = !conflict, reason = conflict ? "The selected venue is already booked or awaiting approval for the requested time." : null });
         }
 
         // POST: api/Bookings
@@ -647,6 +678,6 @@ namespace DIBA_Backend.Controllers
                 bookingId = booking.BookingId,
                 status = cancelledStatus.StatusName
             });
-        } 
+        }
     }
 }
