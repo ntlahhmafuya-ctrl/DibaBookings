@@ -19,21 +19,25 @@ namespace DIBA_Backend.Controllers
             this.dbContext = dbContext; 
         }
 
-        [HttpGet] 
-        public async Task<IActionResult> GetVenues() 
-        { 
+        [HttpGet]
+        public async Task<IActionResult> GetVenues()
+        {
             var venues = await dbContext.Venues
-                .Select(v => new VenueResponseDto 
-                { 
-                    VenueId = v.VenueId, 
-                    VenueName = v.VenueName, 
+                .Select(v => new VenueResponseDto
+                {
+                    VenueId = v.VenueId,
+                    VenueName = v.VenueName,
                     VenueDescription = v.VenueDescription,
                     Capacity = v.Capacity,
-                    Location = v.Location, 
-                    VenueStatus = v.VenueStatus 
+                    Price = v.Price,
+                    Location = v.Location,
+                    Latitude = v.Latitude,
+                    Longitude = v.Longitude,
+                    VenueStatus = v.VenueStatus
                 })
-                .ToListAsync(); 
-            return Ok(venues); 
+                .ToListAsync();
+
+            return Ok(venues);
         }
 
         [HttpGet("{id:guid}")]
@@ -53,7 +57,10 @@ namespace DIBA_Backend.Controllers
                 VenueName = venue.VenueName, 
                 VenueDescription = venue.VenueDescription,
                 Capacity = venue.Capacity,
+                Price = venue.Price,
                 Location = venue.Location,
+                Latitude = venue.Latitude,
+                Longitude = venue.Longitude,
                 VenueStatus = venue.VenueStatus 
             };
             return Ok(response); 
@@ -62,27 +69,33 @@ namespace DIBA_Backend.Controllers
         [HttpPost]
         [Authorize(Roles = "Administrator,Staff")]
         public async Task<IActionResult> CreateVenue(CreateVenueDto createVenueDto) 
-        { 
-            var venue = new Venue 
-            { 
-                VenueId = Guid.NewGuid(), 
-                VenueName = createVenueDto.VenueName, 
-                VenueDescription = createVenueDto.VenueDescription, 
-                Capacity = createVenueDto.Capacity, 
-                Location = createVenueDto.Location, 
-                VenueStatus = createVenueDto.VenueStatus 
-            }; 
+        {
+            var venue = new Venue
+            {
+                VenueId = Guid.NewGuid(),
+                VenueName = createVenueDto.VenueName,
+                VenueDescription = createVenueDto.VenueDescription,
+                Capacity = createVenueDto.Capacity,
+                Price = createVenueDto.Price,
+                Location = createVenueDto.Location,
+                Latitude = createVenueDto.Latitude,
+                Longitude = createVenueDto.Longitude,
+                VenueStatus = createVenueDto.VenueStatus
+            };
             dbContext.Venues.Add(venue); 
-            await dbContext.SaveChangesAsync(); 
-            var response = new VenueResponseDto 
-            { 
-                VenueId = venue.VenueId, 
-                VenueName = venue.VenueName, 
-                VenueDescription = venue.VenueDescription, 
-                Capacity = venue.Capacity, 
-                Location = venue.Location, 
-                VenueStatus = venue.VenueStatus 
-            }; 
+            await dbContext.SaveChangesAsync();
+            var response = new VenueResponseDto
+            {
+                VenueId = venue.VenueId,
+                VenueName = venue.VenueName,
+                VenueDescription = venue.VenueDescription,
+                Capacity = venue.Capacity,
+                Price = venue.Price,
+                Location = venue.Location,
+                Latitude = venue.Latitude,
+                Longitude = venue.Longitude,
+                VenueStatus = venue.VenueStatus
+            };
             return CreatedAtAction(nameof(GetVenue), new { id = venue.VenueId }, response); 
         }
 
@@ -97,13 +110,16 @@ namespace DIBA_Backend.Controllers
             if (venue == null)
             { 
                 return NotFound("Venue not found."); 
-            } 
-            
+            }
+
             venue.VenueName = updateVenueDto.VenueName;
             venue.VenueDescription = updateVenueDto.VenueDescription;
-            venue.Capacity = updateVenueDto.Capacity; 
-            venue.Location = updateVenueDto.Location; 
-            venue.VenueStatus = updateVenueDto.VenueStatus; 
+            venue.Capacity = updateVenueDto.Capacity;
+            venue.Price = updateVenueDto.Price;
+            venue.Location = updateVenueDto.Location;
+            venue.Latitude = updateVenueDto.Latitude;
+            venue.Longitude = updateVenueDto.Longitude;
+            venue.VenueStatus = updateVenueDto.VenueStatus;
 
             await dbContext.SaveChangesAsync(); 
 

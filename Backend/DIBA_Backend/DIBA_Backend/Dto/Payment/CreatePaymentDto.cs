@@ -2,10 +2,6 @@
 {
     public class CreatePaymentDto
     {
-        public decimal Amount { get; set; }
-
-        public string? ReferenceNumber { get; set; }
-
         public Guid BookingId { get; set; }
     }
 }

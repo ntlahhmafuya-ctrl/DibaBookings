@@ -99,47 +99,66 @@ namespace DIBA_Backend.Data
 
         private static async Task SeedVenuesAsync(DIBABookingsDbContext db)
         {
-            const string location = "North Campus Conference Centre, Nelson Mandela University, Gqeberha";
+            const string location =
+                "North Campus Conference Centre, Nelson Mandela University, Gqeberha";
+
+            const double latitude = -34.001278;
+            const double longitude = 25.673250;
 
             var theatre = await GetOrCreateVenueAsync(
                 db,
                 "Theatre",
                 "Prestigious main conference theatre. Standard seating for 120 delegates and a maximum of 150 delegates with additional loose seating.",
                 150,
+                12500.00m,
                 location,
-                "Available");
+                "Available",
+                latitude,
+                longitude);
 
             var venue2 = await GetOrCreateVenueAsync(
                 db,
                 "Venue 2",
                 "Smaller breakaway room suitable for training, seminars and meetings.",
                 40,
+                8500.00m,
                 location,
-                "Available");
+                "Available",
+                latitude,
+                longitude);
 
             var venue3 = await GetOrCreateVenueAsync(
                 db,
                 "Venue 3",
                 "Smaller breakaway room suitable for training, seminars and meetings.",
                 40,
+                8500.00m,
                 location,
-                "Available");
+                "Available",
+                latitude,
+                longitude);
 
             var restaurant = await GetOrCreateVenueAsync(
                 db,
                 "Restaurant",
                 "On-site restaurant suitable for business breakfasts, lunches and evening functions. Seats up to 150 diners.",
                 150,
+                12500.00m,
                 location,
-                "Available");
+                "Available",
+                latitude,
+                longitude);
 
             var foyer = await GetOrCreateVenueAsync(
                 db,
                 "Exhibition Foyer",
                 "Multi-purpose foyer suitable for cocktail functions, small exhibitions, product launches and displays. Capacity is flexible and should be confirmed with Conference Centre staff.",
                 0,
+                6000.00m,
                 location,
-                "Available");
+                "Available",
+                latitude,
+                longitude); ;
 
             await db.SaveChangesAsync();
 
@@ -234,13 +253,23 @@ namespace DIBA_Backend.Data
             string name,
             string description,
             int capacity,
+            decimal price,
             string location,
-            string status)
+            string status,
+            double latitude,
+            double longitude)
         {
-            var venue = await db.Venues.FirstOrDefaultAsync(v => v.VenueName == name);
+            var venue = await db.Venues
+                .FirstOrDefaultAsync(v => v.VenueName == name);
 
             if (venue != null)
+            {
+                venue.Latitude = latitude;
+                venue.Longitude = longitude;
+                venue.Price = price;
+
                 return venue;
+            }
 
             venue = new Venue
             {
@@ -248,11 +277,15 @@ namespace DIBA_Backend.Data
                 VenueName = name,
                 VenueDescription = description,
                 Capacity = capacity,
+                Price = price,
                 Location = location,
-                VenueStatus = status
+                VenueStatus = status,
+                Latitude = latitude,
+                Longitude = longitude
             };
 
             db.Venues.Add(venue);
+
             return venue;
         }
 

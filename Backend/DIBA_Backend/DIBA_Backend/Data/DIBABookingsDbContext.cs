@@ -173,6 +173,10 @@ namespace DIBA_Backend.Data
                 .HasForeignKey(n => n.BookingId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Venue>()
+                .Property(v => v.Price)
+                .HasPrecision(18, 2);
+
 
             // =========================================================
             // SEED ROLES
