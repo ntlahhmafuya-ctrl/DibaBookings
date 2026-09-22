@@ -1,0 +1,7 @@
+import Empty from "../Empty";
+import { formatDate } from "../../../utils/dashboardUtils";
+
+function NotificationsView({ notifications, onRead, onOpenBooking, onPay }) { return <section className="workspace-view"><div className="workspace-toolbar"><div><p className="section-kicker">STAY INFORMED</p><h2>Notifications</h2></div></div>{notifications.length ? <div className="notifications-list">{notifications.map((notification) => {
+    const isApprovedNotification = notification.notificationType?.toLowerCase() === "booking approved" || notification.message?.toLowerCase().includes("approved");
+    return <div className={`notification-row ${notification.isRead ? "read" : "unread"}`} key={notification.notificationId} role="button" tabIndex={0} onClick={() => { onRead(notification); if (notification.bookingId) onOpenBooking(notification.bookingId); }} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onRead(notification); if (notification.bookingId) onOpenBooking(notification.bookingId); } }}><span className="notification-bullet">{notification.isRead ? "✓" : "•"}</span><span><strong>{notification.notificationType}</strong><p>{notification.message}</p><small>{formatDate(notification.dateCreated)}</small></span>{isApprovedNotification && notification.bookingId && <button type="button" className="outline-action" onClick={(event) => { event.stopPropagation(); onPay(notification); }}>Pay now</button>}</div>;
+})}</div> : <Empty title="You're all caught up" text="You don't have any new notifications." />}</section>; }

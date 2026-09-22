@@ -1,0 +1,1 @@
+function FormActions({ saving, submit, onCancel }) { return <div className="form-actions"><button type="button" className="outline-action" onClick={onCancel}>Cancel</button><button type="submit" className="primary-action" disabled={saving}>{saving ? "Saving..." : submit}</button></div>; }

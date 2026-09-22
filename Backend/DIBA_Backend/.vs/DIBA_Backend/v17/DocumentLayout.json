@@ -1,21 +1,32 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\",
+  "WorkspaceRootPath": "C:\\Users\\s226083470\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|c:\\users\\ntlahla\\source\\repos\\dibabookings\\backend\\diba_backend\\diba_backend\\data\\dbseeder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|solutionrelative:diba_backend\\data\\dbseeder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|c:\\users\\s226083470\\source\\repos\\dibabookings\\backend\\diba_backend\\diba_backend\\properties\\launchsettings.json||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|solutionrelative:diba_backend\\properties\\launchsettings.json||{3B902123-F8A7-4915-9F01-361F908088D0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|c:\\users\\ntlahla\\source\\repos\\dibabookings\\backend\\diba_backend\\diba_backend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|c:\\users\\s226083470\\source\\repos\\dibabookings\\backend\\diba_backend\\diba_backend\\diba_backend.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|solutionrelative:diba_backend\\diba_backend.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|c:\\users\\s226083470\\source\\repos\\dibabookings\\backend\\diba_backend\\diba_backend\\appsettings.json||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|solutionrelative:diba_backend\\appsettings.json||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|c:\\users\\s226083470\\source\\repos\\dibabookings\\backend\\diba_backend\\diba_backend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|solutionrelative:diba_backend\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|c:\\users\\ntlahla\\source\\repos\\dibabookings\\backend\\diba_backend\\diba_backend\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|solutionrelative:diba_backend\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+      "AbsoluteMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|c:\\users\\s226083470\\source\\repos\\dibabookings\\backend\\diba_backend\\diba_backend\\data\\dbseeder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|solutionrelative:diba_backend\\data\\dbseeder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|c:\\users\\ntlahla\\source\\repos\\dibabookings\\backend\\diba_backend\\diba_backend\\migrations\\20260920054030_addisactivetouser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|c:\\users\\s226083470\\source\\repos\\dibabookings\\backend\\diba_backend\\diba_backend\\migrations\\20260920054030_addisactivetouser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|solutionrelative:diba_backend\\migrations\\20260920054030_addisactivetouser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
@@ -26,60 +37,102 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 2,
+          "SelectedChildIndex": 0,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "launchSettings.json",
+              "DocumentMoniker": "C:\\Users\\s226083470\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Properties\\launchSettings.json",
+              "RelativeDocumentMoniker": "DIBA_Backend\\Properties\\launchSettings.json",
+              "ToolTip": "C:\\Users\\s226083470\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Properties\\launchSettings.json",
+              "RelativeToolTip": "DIBA_Backend\\Properties\\launchSettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-09-22T13:02:42.056Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "DIBA_Backend",
+              "DocumentMoniker": "C:\\Users\\s226083470\\Source\\Repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\DIBA_Backend.csproj",
+              "RelativeDocumentMoniker": "DIBA_Backend\\DIBA_Backend.csproj",
+              "ToolTip": "C:\\Users\\s226083470\\Source\\Repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\DIBA_Backend.csproj",
+              "RelativeToolTip": "DIBA_Backend\\DIBA_Backend.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-09-22T13:02:38.686Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
+            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "appsettings.json",
-              "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\appsettings.json",
-              "RelativeDocumentMoniker": "DIBA_Backend\\appsettings.json",
-              "ToolTip": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\appsettings.json",
-              "RelativeToolTip": "DIBA_Backend\\appsettings.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAOAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-09-20T06:09:36.496Z",
+              "DocumentIndex": 3,
+              "Title": "Microsoft.Common.CurrentVersion.targets",
+              "DocumentMoniker": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
+              "RelativeDocumentMoniker": "..\\..\\..\\..\\..\\..\\..\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
+              "ToolTip": "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
+              "RelativeToolTip": "..\\..\\..\\..\\..\\..\\..\\Program Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin\\amd64\\Microsoft.Common.CurrentVersion.targets",
+              "ViewState": "AgIAAEEVAAAAAAAAAAAjwFIVAAALAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003801|",
+              "WhenOpened": "2026-09-22T12:57:43.088Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\s226083470\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\appsettings.json",
+              "RelativeDocumentMoniker": "DIBA_Backend\\appsettings.json",
+              "ToolTip": "C:\\Users\\s226083470\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\appsettings.json",
+              "RelativeToolTip": "DIBA_Backend\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-09-22T12:56:54.739Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "DbSeeder.cs",
-              "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Data\\DbSeeder.cs",
+              "DocumentMoniker": "C:\\Users\\s226083470\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Data\\DbSeeder.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Data\\DbSeeder.cs",
-              "ToolTip": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Data\\DbSeeder.cs",
+              "ToolTip": "C:\\Users\\s226083470\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Data\\DbSeeder.cs",
               "RelativeToolTip": "DIBA_Backend\\Data\\DbSeeder.cs",
-              "ViewState": "AgIAABMAAAAAAAAAAAAWwCMAAAAMAAAAAAAAAA==",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAWwBMAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-09-20T05:27:23.107Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 6,
               "Title": "20260920054030_AddIsActiveToUser.cs",
-              "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Migrations\\20260920054030_AddIsActiveToUser.cs",
+              "DocumentMoniker": "C:\\Users\\s226083470\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Migrations\\20260920054030_AddIsActiveToUser.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Migrations\\20260920054030_AddIsActiveToUser.cs",
-              "ToolTip": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Migrations\\20260920054030_AddIsActiveToUser.cs",
+              "ToolTip": "C:\\Users\\s226083470\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Migrations\\20260920054030_AddIsActiveToUser.cs",
               "RelativeToolTip": "DIBA_Backend\\Migrations\\20260920054030_AddIsActiveToUser.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-20T05:40:41.875Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-20T05:40:41.875Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 4,
               "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Program.cs",
+              "DocumentMoniker": "C:\\Users\\s226083470\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Program.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Program.cs",
-              "ToolTip": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Program.cs",
+              "ToolTip": "C:\\Users\\s226083470\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Program.cs",
               "RelativeToolTip": "DIBA_Backend\\Program.cs",
-              "ViewState": "AgIAAFoAAAAAAAAAAAAAAGoAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAGwAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-09-20T05:24:22.259Z",
               "EditorCaption": ""

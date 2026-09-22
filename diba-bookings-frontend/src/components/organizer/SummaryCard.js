@@ -1,0 +1,1 @@
+function SummaryCard({ icon, label, value, tone }) { return <div className={`organizer-summary-card ${tone}`}><span className="summary-icon">{icon}</span><div><strong>{value}</strong><span>{label}</span></div></div>; }
