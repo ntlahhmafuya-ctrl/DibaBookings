@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import conferenceCentre from "../images/Conference centre.jpg";
-import lectureTheatre from "../images/Theatre (2).jpg";
-import diningRoom from "../images/Dining Room.jpg";
-import campusView from "../images/Nelson Mandela University.jpg";
+import conferenceCentre from "../assets/images/Conference centre.jpg";
+import lectureTheatre from "../assets/images/Theatre (2).jpg";
+import diningRoom from "../assets/images/Dining Room.jpg";
+import campusView from "../assets/images/Nelson Mandela University.jpg";
 
 const features = [
     { icon: "⌕", title: "Find a Venue", text: "Explore conference facilities and choose a space that suits your event." },

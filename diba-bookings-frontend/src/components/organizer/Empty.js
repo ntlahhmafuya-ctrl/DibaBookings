@@ -1,1 +1,3 @@
 function Empty({ title, text, action, onAction }) { return <div className="organizer-empty-state"><span className="empty-icon">⌖</span><h4>{title}</h4><p>{text}</p>{action && <button className="outline-action" onClick={onAction}>{action}</button>}</div>; }
+
+export default Empty;

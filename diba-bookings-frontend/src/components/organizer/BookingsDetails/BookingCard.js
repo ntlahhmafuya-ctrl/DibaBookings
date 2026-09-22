@@ -1,1 +1,6 @@
+import Status from "../Status";
+import { dateText, getDate, timeText } from "../../../utils/dashboardUtils";
+
 function BookingCard({ booking, onOpen }) { return <article className="booking-card compact-booking"><div className="booking-card-body"><div className="booking-card-top"><div><p className="booking-label">{booking.eventName || "Untitled event"}</p><h4>{booking.venueName || "Venue details pending"}</h4></div><Status status={booking.statusName} /></div><div className="booking-meta"><span>▣ {dateText(getDate(booking))}</span><span>◷ {timeText(booking.startDateTime)} - {timeText(booking.endDateTime)}</span></div><div className="booking-card-footer"><button className="outline-action" onClick={() => onOpen(booking)}>View booking</button></div></div></article>; }
+
+export default BookingCard;

@@ -4,10 +4,18 @@ import api from "../../services/api";
 import conferenceCentre from "../../assets/images/Conference centre.jpg";
 import theatreImage from "../../assets/images/Theatre (2).jpg";
 import diningImage from "../../assets/images/Dining Room.jpg";
-import { Loading } from "../../components/DashboardShared";
-import Home from "../../components/organizer/Home";
+import { Loading } from "./DashboardShared";
+import Home from "../../components/organizer/Home/Home";
+import VenueBrowser from "../../components/organizer/VenueBrowser/VenueBrowser";
+import VenueDetails from "../../components/organizer/VenueBrowser/VenueDetails";
+import EventForm from "../../components/organizer/EventsView/EventForm";
+import EventsView from "../../components/organizer/EventsView/EventsView";
+import BookingForm from "../../components/organizer/BookingsDetails/BookingForm";
+import BookingsView from "../../components/organizer/BookingsDetails/BookingsView";
+import BookingDetails from "../../components/organizer/BookingsDetails/BookingDetails";
+import NotificationsView from "../../components/organizer/NotificationsView/NotificationsView";
 
-import { clearSession, formatDate, shortId, statusName, statusClass, getDate, bookingStart, isFutureBooking, dateText, timeText, localInput, errorText, overlaps } from "../../utils/dashboardUtils";
+import { clearSession, statusName, bookingStart, isFutureBooking, localInput, errorText, overlaps } from "../../utils/dashboardUtils";
 
 const images = [conferenceCentre, theatreImage, diningImage];
 const navItems = [["⌂", "Dashboard", "dashboard"], ["⌖", "Find a Venue", "venues"], ["▣", "My Bookings", "bookings"], ["◫", "My Events", "events"], ["◌", "Notifications", "notifications"]];

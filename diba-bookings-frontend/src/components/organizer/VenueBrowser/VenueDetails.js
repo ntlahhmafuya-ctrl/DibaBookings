@@ -1,3 +1,5 @@
+import Status from "../Status";
+
 function VenueDetails({ venue, image, onBack, onBook }) {
     const available = venue.venueStatus?.toLowerCase() === "available";
     const lat = Number(venue?.latitude ?? venue?.Latitude ?? 0);
@@ -114,3 +116,4 @@ function VenueDetails({ venue, image, onBack, onBook }) {
         </section>
     );
 }
+export default VenueDetails;

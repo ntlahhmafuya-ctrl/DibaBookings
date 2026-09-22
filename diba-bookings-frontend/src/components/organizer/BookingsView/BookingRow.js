@@ -1,4 +1,6 @@
 import Status from "../Status";
-import { dateText, timeText } from "../../../utils/dashboardUtils";
+import { dateText, statusClass, timeText } from "../../../utils/dashboardUtils";
 
 function BookingRow({ booking, onOpen, onEdit, onCancel, saving }) { const status = booking.statusName || "Pending"; return <article className="record-row"><div className="record-main"><span className={`status-dot ${statusClass(status)}`} /><div><strong>{booking.eventName || "Untitled event"}</strong><p>{booking.venueName || "Venue"} · {dateText(booking.startDateTime)} · {timeText(booking.startDateTime)} - {timeText(booking.endDateTime)}</p></div></div><Status status={status} /><div className="record-actions"><button onClick={() => onOpen(booking)}>View Details</button>{status === "Pending" && <button onClick={() => onEdit(booking)}>Edit</button>}{!["Cancelled", "Rejected", "Completed"].includes(status) && <button className="danger-link" disabled={saving} onClick={() => onCancel(booking)}>Cancel</button>}</div></article>; }
+
+export default BookingRow;
