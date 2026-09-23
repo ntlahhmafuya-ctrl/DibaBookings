@@ -1,0 +1,83 @@
+/* Global Styles */
+
+:root {
+    --ink: #18232d;
+    --muted: #68747d;
+    --paper: #f3f5f1;
+    --line: #dce2dd;
+    --blue: #175c72;
+    --green: #32745b;
+    --amber: #bd7625;
+    --red: #ad4d48;
+}
+
+/* Base */
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+img {
+    max-width: 100%;
+}
+
+/* General application shell */
+
+.app-shell {
+    margin: 0 auto;
+    max-width: 1440px;
+    padding: 42px 5vw 72px;
+}
+
+/* Topbar */
+
+.topbar {
+    align-items: flex-start;
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 34px;
+}
+
+.topbar h1 {
+    font-family: Georgia, serif;
+    font-size: clamp(2.1rem, 4vw, 3.7rem);
+    font-weight: 400;
+    letter-spacing: -1px;
+    margin: 4px 0 8px;
+}
+
+.subhead {
+    color: var(--muted);
+    font-size: 1.05rem;
+    margin: 0;
+}
+
+.eyebrow {
+    color: var(--blue);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    margin: 0 0 9px;
+}

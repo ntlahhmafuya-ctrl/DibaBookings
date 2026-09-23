@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import api from "../../services/api";
 
 function BookingCalendar({
@@ -45,7 +45,7 @@ function BookingCalendar({
         return `${year}-${month}-${day}`;
     };
 
-    const loadAvailability = async (date) => {
+    const loadAvailability = useCallback(async (date) => {
         if (!venueId || !date) {
             setBookings([]);
             return;
@@ -81,13 +81,13 @@ function BookingCalendar({
         } finally {
             setLoading(false);
         }
-    };
+    }, [venueId]);
 
     useEffect(() => {
         if (selectedDate && venueId) {
             loadAvailability(selectedDate);
         }
-    }, [selectedDate, venueId]);
+    }, [selectedDate, venueId, loadAvailability]);
 
     const goToPreviousMonth = () => {
         setCurrentMonth(new Date(year, month - 1, 1));

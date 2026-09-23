@@ -1,0 +1,118 @@
+/* Organiser Calendar */
+
+.booking-calendar-section {
+    background: #fff;
+    border: 1px solid var(--organizer-line);
+    border-radius: 10px;
+    margin-top: 26px;
+    padding: 22px 20px;
+}
+
+.calendar-intro {
+    margin-bottom: 18px;
+}
+
+.calendar-intro .section-kicker {
+    margin-bottom: 8px;
+}
+
+.calendar-intro h3 {
+    font-size: 1.15rem;
+    margin: 0 0 6px;
+}
+
+.calendar-intro p {
+    color: var(--organizer-muted);
+    font-size: 0.8rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.booking-calendar {
+    background: #f8fbfd;
+    border: 1px solid var(--organizer-line);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.calendar-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.calendar-header h3 {
+    font-size: 0.96rem;
+    margin: 0;
+}
+
+.calendar-header button {
+    align-items: center;
+    background: #fff;
+    border: 1px solid var(--organizer-line);
+    border-radius: 7px;
+    color: var(--organizer-blue);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 1rem;
+    height: 32px;
+    justify-content: center;
+    width: 32px;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.calendar-weekdays {
+    margin-bottom: 8px;
+}
+
+.calendar-weekdays span {
+    color: var(--organizer-muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.calendar-day {
+    align-items: center;
+    background: #fff;
+    border: 1px solid var(--organizer-line);
+    border-radius: 8px;
+    color: var(--organizer-navy);
+    cursor: pointer;
+    display: flex;
+    font-size: 0.75rem;
+    height: 38px;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.calendar-day:hover:not(:disabled) {
+    border-color: var(--organizer-light-blue);
+    color: var(--organizer-blue);
+    transform: translateY(-1px);
+}
+
+.calendar-day.selected {
+    background: var(--organizer-blue);
+    border-color: var(--organizer-blue);
+    color: #fff;
+    font-weight: 700;
+}
+
+.calendar-day:disabled {
+    background: transparent;
+    border-color: transparent;
+    color: transparent;
+    cursor: default;
+}
