@@ -679,5 +679,46 @@ namespace DIBA_Backend.Controllers
                 status = cancelledStatus.StatusName
             });
         }
+
+
+        [HttpGet("venue/{venueId:guid}/availability")]
+        public async Task<IActionResult> GetVenueAvailability(
+    Guid venueId,
+    DateTime date)
+        {
+            var venue = await dbContext.Venues
+                .FirstOrDefaultAsync(v => v.VenueId == venueId);
+
+            if (venue == null)
+            {
+                return NotFound("Venue not found.");
+            }
+
+            var dayStart = date.Date;
+            var dayEnd = dayStart.AddDays(1);
+
+            var bookings = await dbContext.Bookings
+                .Include(b => b.BookingStatus)
+                .Where(b =>
+                    b.VenueId == venueId &&
+                    b.StartDateTime < dayEnd &&
+                    b.EndDateTime > dayStart &&
+                    b.BookingStatus != null &&
+                    (
+                        b.BookingStatus.StatusName == "Pending" ||
+                        b.BookingStatus.StatusName == "Approved"
+                    ))
+                .Select(b => new VenueAvailabilityDto
+                {
+                    BookingId = b.BookingId,
+                    StartDateTime = b.StartDateTime,
+                    EndDateTime = b.EndDateTime,
+                    StatusName = b.BookingStatus!.StatusName
+                })
+                .OrderBy(b => b.StartDateTime)
+                .ToListAsync();
+
+            return Ok(bookings);
+        }
     }
 }
