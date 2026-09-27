@@ -486,6 +486,10 @@ namespace DIBA_Backend.Data
                 // do not need to remain when that booking is deleted.
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Venue>()
+                .Property(v => v.Price)
+                .HasPrecision(18, 2);
+
 
             // =========================================================
             // SEED ROLES

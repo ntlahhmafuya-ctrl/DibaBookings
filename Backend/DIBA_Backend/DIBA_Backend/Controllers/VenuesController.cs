@@ -26,6 +26,7 @@ namespace DIBA_Backend.Controllers
             _dbContext = dbContext;
         }
 
+<<<<<<< HEAD
         // GET: api/Venues
         [HttpGet]
         public async Task<IActionResult> GetVenues()
@@ -45,6 +46,23 @@ namespace DIBA_Backend.Controllers
                     Capacity = venue.Capacity,
                     Location = venue.Location,
                     VenueStatus = venue.VenueStatus
+=======
+        [HttpGet]
+        public async Task<IActionResult> GetVenues()
+        {
+            var venues = await dbContext.Venues
+                .Select(v => new VenueResponseDto
+                {
+                    VenueId = v.VenueId,
+                    VenueName = v.VenueName,
+                    VenueDescription = v.VenueDescription,
+                    Capacity = v.Capacity,
+                    Price = v.Price,
+                    Location = v.Location,
+                    Latitude = v.Latitude,
+                    Longitude = v.Longitude,
+                    VenueStatus = v.VenueStatus
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
                 })
                 .ToListAsync();
 
@@ -69,8 +87,15 @@ namespace DIBA_Backend.Controllers
                 VenueName = venue.VenueName,
                 VenueDescription = venue.VenueDescription,
                 Capacity = venue.Capacity,
+                Price = venue.Price,
                 Location = venue.Location,
+<<<<<<< HEAD
                 VenueStatus = venue.VenueStatus
+=======
+                Latitude = venue.Latitude,
+                Longitude = venue.Longitude,
+                VenueStatus = venue.VenueStatus 
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
             };
 
             return Ok(response);
@@ -84,7 +109,11 @@ namespace DIBA_Backend.Controllers
         // DIBA adaptation: venue creation is limited to Administrators and Staff
         // because these users manage the conference centre's venue information.
         [Authorize(Roles = "Administrator,Staff")]
+<<<<<<< HEAD
         public async Task<IActionResult> CreateVenue(CreateVenueDto createVenueDto)
+=======
+        public async Task<IActionResult> CreateVenue(CreateVenueDto createVenueDto) 
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
         {
             var venue = new Venue
             {
@@ -92,6 +121,7 @@ namespace DIBA_Backend.Controllers
                 VenueName = createVenueDto.VenueName,
                 VenueDescription = createVenueDto.VenueDescription,
                 Capacity = createVenueDto.Capacity,
+<<<<<<< HEAD
                 Location = createVenueDto.Location,
                 VenueStatus = createVenueDto.VenueStatus
             };
@@ -100,12 +130,23 @@ namespace DIBA_Backend.Controllers
 
             await _dbContext.SaveChangesAsync();
 
+=======
+                Price = createVenueDto.Price,
+                Location = createVenueDto.Location,
+                Latitude = createVenueDto.Latitude,
+                Longitude = createVenueDto.Longitude,
+                VenueStatus = createVenueDto.VenueStatus
+            };
+            dbContext.Venues.Add(venue); 
+            await dbContext.SaveChangesAsync();
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
             var response = new VenueResponseDto
             {
                 VenueId = venue.VenueId,
                 VenueName = venue.VenueName,
                 VenueDescription = venue.VenueDescription,
                 Capacity = venue.Capacity,
+<<<<<<< HEAD
                 Location = venue.Location,
                 VenueStatus = venue.VenueStatus
             };
@@ -117,6 +158,15 @@ namespace DIBA_Backend.Controllers
                 nameof(GetVenue),
                 new { id = venue.VenueId },
                 response);
+=======
+                Price = venue.Price,
+                Location = venue.Location,
+                Latitude = venue.Latitude,
+                Longitude = venue.Longitude,
+                VenueStatus = venue.VenueStatus
+            };
+            return CreatedAtAction(nameof(GetVenue), new { id = venue.VenueId }, response); 
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
         }
 
         // PUT: api/Venues/{id}
@@ -135,14 +185,26 @@ namespace DIBA_Backend.Controllers
                 .FirstOrDefaultAsync(venue => venue.VenueId == id);
 
             if (venue == null)
+<<<<<<< HEAD
             {
                 return NotFound("Venue not found.");
+=======
+            { 
+                return NotFound("Venue not found."); 
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
             }
 
             venue.VenueName = updateVenueDto.VenueName;
             venue.VenueDescription = updateVenueDto.VenueDescription;
             venue.Capacity = updateVenueDto.Capacity;
+<<<<<<< HEAD
             venue.Location = updateVenueDto.Location;
+=======
+            venue.Price = updateVenueDto.Price;
+            venue.Location = updateVenueDto.Location;
+            venue.Latitude = updateVenueDto.Latitude;
+            venue.Longitude = updateVenueDto.Longitude;
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
             venue.VenueStatus = updateVenueDto.VenueStatus;
 
             await _dbContext.SaveChangesAsync();

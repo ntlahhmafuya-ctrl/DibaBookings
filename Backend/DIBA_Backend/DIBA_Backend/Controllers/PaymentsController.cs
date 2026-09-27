@@ -1,6 +1,7 @@
 ﻿using DIBA_Backend.Data;
 using DIBA_Backend.Dto.Payment;
 using DIBA_Backend.Models.Entities;
+using DIBA_Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -21,10 +22,14 @@ namespace DIBA_Backend.Controllers
     public class PaymentsController : ControllerBase
     {
         private readonly DIBABookingsDbContext dbContext;
+        private readonly YocoPaymentService yocoPaymentService;
 
-        public PaymentsController(DIBABookingsDbContext dbContext)
+        public PaymentsController(
+            DIBABookingsDbContext dbContext,
+            YocoPaymentService yocoPaymentService)
         {
             this.dbContext = dbContext;
+            this.yocoPaymentService = yocoPaymentService;
         }
 
         // GET: api/Payments
@@ -135,7 +140,7 @@ namespace DIBA_Backend.Controllers
         // for their own approved bookings.
         [Authorize(Roles = "Event Organiser")]
         public async Task<IActionResult> CreatePayment(
-            CreatePaymentDto createPaymentDto)
+    CreatePaymentDto createPaymentDto)
         {
             // Reference: Microsoft Learn, "Claims-based authorization
             // in ASP.NET Core".
@@ -159,6 +164,7 @@ namespace DIBA_Backend.Controllers
                 return Unauthorized("Invalid user ID.");
             }
 
+<<<<<<< HEAD
             // DIBA-specific validation:
             // payment amounts must be positive before a payment record
             // can be created.
@@ -174,8 +180,11 @@ namespace DIBA_Backend.Controllers
             // what operations are currently allowed.
             // DIBA adaptation: the payment operation depends on the
             // booking status.
+=======
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
             var booking = await dbContext.Bookings
                 .Include(b => b.BookingStatus)
+                .Include(b => b.Venue)
                 .FirstOrDefaultAsync(
                     b => b.BookingId ==
                          createPaymentDto.BookingId);
@@ -200,20 +209,25 @@ namespace DIBA_Backend.Controllers
                     "Booking status could not be determined.");
             }
 
+<<<<<<< HEAD
             // Reference: JedAngelo, "ConferenceBookingApi".
             // Similar logic: booking status controls what actions can
             // be performed on a booking.
             //
             // DIBA adaptation: a payment may only be recorded after
             // the booking has reached the Approved state.
+=======
+            // Only approved bookings can be paid
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
             if (!booking.BookingStatus.StatusName.Equals(
                     "Approved",
                     StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(
-                    "Payment can only be recorded for an approved booking.");
+                    "Payment can only be made for an approved booking.");
             }
 
+<<<<<<< HEAD
             // Similar duplicate-record prevention logic:
             // check whether a payment already exists before creating
             // another payment for the same booking.
@@ -225,40 +239,105 @@ namespace DIBA_Backend.Controllers
                     .AnyAsync(
                         p => p.BookingId ==
                              createPaymentDto.BookingId);
+=======
+            // Make sure the booking has a venue
+            if (booking.Venue == null)
+            {
+                return BadRequest(
+                    "The booking does not have a venue.");
+            }
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
 
-            if (existingPayment)
+            // Get the payment amount from the venue
+            var amount = booking.Venue.Price;
+
+            if (amount <= 0)
+            {
+                return BadRequest(
+                    "The venue does not have a valid price.");
+            }
+
+            // Check if payment already exists
+            var existingPayment = await dbContext.Payments
+                .FirstOrDefaultAsync(
+                    p => p.BookingId == createPaymentDto.BookingId);
+
+            if (existingPayment != null)
             {
                 return Conflict(
                     "A payment already exists for this booking.");
             }
 
+<<<<<<< HEAD
             // DIBA-specific payment creation.
             // A unique identifier and UTC timestamp are assigned when
             // the payment record is created.
+=======
+            // Generate DIBA payment reference
+            var referenceNumber =
+                $"DIBA-{DateTime.UtcNow:yyyyMMddHHmmss}";
+
+            YocoCheckoutResponse? checkout;
+
+            try
+            {
+                checkout = await yocoPaymentService.CreateCheckoutAsync(
+                    amount,
+                    referenceNumber);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    502,
+                    new
+                    {
+                        message = "Unable to create Yoco checkout.",
+                        error = ex.Message
+                    });
+            }
+
+            if (checkout == null ||
+                string.IsNullOrWhiteSpace(checkout.Id) ||
+                string.IsNullOrWhiteSpace(checkout.RedirectUrl))
+            {
+                return StatusCode(
+                    502,
+                    "Yoco did not return a valid checkout.");
+            }
+
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
             var payment = new Payment
             {
                 PaymentId = Guid.NewGuid(),
-                Amount = createPaymentDto.Amount,
+                Amount = amount,
                 PaymentDate = DateTime.UtcNow,
+<<<<<<< HEAD
                 ReferenceNumber =
                     createPaymentDto.ReferenceNumber,
                 BookingId = createPaymentDto.BookingId
+=======
+                ReferenceNumber = referenceNumber,
+                YocoCheckoutId = checkout.Id,
+                PaymentStatus = "Pending",
+                BookingId = booking.BookingId
+>>>>>>> cb9fa948440e26bb53a2c1d4c8a47f2d8e685dbc
             };
 
             dbContext.Payments.Add(payment);
 
             await dbContext.SaveChangesAsync();
 
-            var response = new PaymentResponseDto
+            return Ok(new
             {
-                PaymentId = payment.PaymentId,
-                Amount = payment.Amount,
-                PaymentDate = payment.PaymentDate,
-                ReferenceNumber = payment.ReferenceNumber,
-                BookingId = payment.BookingId
-            };
-
-            return Ok(response);
+                paymentId = payment.PaymentId,
+                bookingId = payment.BookingId,
+                venueName = booking.Venue.VenueName,
+                amount = payment.Amount,
+                referenceNumber = payment.ReferenceNumber,
+                paymentStatus = payment.PaymentStatus,
+                yocoCheckoutId = payment.YocoCheckoutId,
+                checkoutUrl = checkout.RedirectUrl
+            });
         }
     }
 }

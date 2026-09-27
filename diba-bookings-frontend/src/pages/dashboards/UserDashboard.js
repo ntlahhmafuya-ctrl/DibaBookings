@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Badge, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
-import api from "../services/api";
+import api from "../../services/api";
 import { Loading, RoleShell, Stat } from "./DashboardShared";
-import { clearSession, shortId } from "./dashboardUtils";
+import { clearSession, shortId } from "../../utils/dashboardUtils";
 
 function UserDashboard() {
     const [bookings, setBookings] = useState([]);

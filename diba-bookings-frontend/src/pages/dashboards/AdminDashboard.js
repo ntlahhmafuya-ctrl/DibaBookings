@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Form, Modal, Spinner, Table } from "react-bootstrap";
 import { toast } from "react-toastify";
-import api from "../services/api";
+import api from "../../services/api";
 import { Stat } from "./DashboardShared";
-import { clearSession, emptyOverview, formatDate, shortId } from "./dashboardUtils";
+import { clearSession, emptyOverview, formatDate, shortId } from "../../utils/dashboardUtils";
 
 function AdminDashboard() {
     const [overview, setOverview] = useState(emptyOverview);

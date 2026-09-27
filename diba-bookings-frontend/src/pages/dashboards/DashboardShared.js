@@ -1,5 +1,4 @@
 import { Button, Spinner } from "react-bootstrap";
-
 export function Stat({ label, value, tone = "blue" }) {
     return <div className={`stat-card stat-${tone}`}><span>{label}</span><strong>{value}</strong></div>;
 }
