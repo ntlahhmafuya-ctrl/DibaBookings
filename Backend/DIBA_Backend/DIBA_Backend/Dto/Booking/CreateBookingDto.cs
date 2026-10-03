@@ -11,5 +11,7 @@
         public DateTime EndDateTime { get; set; }
 
         public string? SpecialRequirements { get; set; }
+
+        public bool AcknowledgementAccepted { get; set; }
     }
 }

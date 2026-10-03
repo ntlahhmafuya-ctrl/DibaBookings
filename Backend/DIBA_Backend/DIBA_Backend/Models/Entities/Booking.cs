@@ -14,6 +14,10 @@
         
         public string? AdminNotes { get; set; }
 
+        public bool AcknowledgementAccepted { get; set; }
+
+        public DateTime? AcknowledgementAcceptedAt { get; set; }
+
         public Guid UserId { get; set; }
 
         public Guid EventId { get; set; }

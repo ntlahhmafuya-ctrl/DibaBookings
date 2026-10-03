@@ -98,6 +98,13 @@ namespace DIBA_Backend.Controllers
                     VenueId = booking.VenueId,
                     BookingStatusId = booking.BookingStatusId,
 
+
+                    AcknowledgementAccepted =
+        booking.AcknowledgementAccepted,
+
+                    AcknowledgementAcceptedAt =
+        booking.AcknowledgementAcceptedAt,
+
                     StatusName =
                         booking.BookingStatus != null
                             ? booking.BookingStatus.StatusName
@@ -196,6 +203,12 @@ namespace DIBA_Backend.Controllers
                 StatusName =
                     booking.BookingStatus?.StatusName ??
                     string.Empty,
+
+                AcknowledgementAccepted =
+    booking.AcknowledgementAccepted,
+
+                AcknowledgementAcceptedAt =
+    booking.AcknowledgementAcceptedAt,
 
                 OrganiserName =
                     booking.User == null
@@ -330,7 +343,7 @@ namespace DIBA_Backend.Controllers
             // DIBA adaptation: the UserId is used to associate the new
             // booking with the authenticated Event Organiser.
             var userIdClaim =
-                User.FindFirst(ClaimTypes.NameIdentifier);
+    User.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null)
             {
@@ -345,6 +358,11 @@ namespace DIBA_Backend.Controllers
                 return Unauthorized("Invalid user ID.");
             }
 
+            if (!createBookingDto.AcknowledgementAccepted)
+            {
+                return BadRequest(
+                    "You must acknowledge the booking requirements before submitting the booking.");
+            }
 
             // Reference: ErmaoCyber, "Meeting Room Reservation API".
             // Similar logic: the requested end time must be after the
@@ -454,7 +472,6 @@ namespace DIBA_Backend.Controllers
                     "Pending booking status could not be found.");
             }
 
-
             var booking = new Booking
             {
                 BookingId = Guid.NewGuid(),
@@ -470,7 +487,9 @@ namespace DIBA_Backend.Controllers
                 EventId = createBookingDto.EventId,
                 VenueId = createBookingDto.VenueId,
                 BookingStatusId =
-                    pendingStatus.BookingStatusId
+                    pendingStatus.BookingStatusId,
+                        AcknowledgementAccepted = true,
+                AcknowledgementAcceptedAt = DateTime.UtcNow
             };
 
             _dbContext.Bookings.Add(booking);
@@ -493,7 +512,13 @@ namespace DIBA_Backend.Controllers
                 EventId = booking.EventId,
                 VenueId = booking.VenueId,
                 BookingStatusId =
-                    booking.BookingStatusId
+                    booking.BookingStatusId,
+
+                AcknowledgementAccepted =
+                    booking.AcknowledgementAccepted,
+
+                AcknowledgementAcceptedAt =
+                    booking.AcknowledgementAcceptedAt
             };
 
             return Ok(response);
@@ -1146,7 +1171,7 @@ namespace DIBA_Backend.Controllers
     Guid venueId,
     DateTime date)
         {
-            var venue = await dbContext.Venues
+            var venue = await _dbContext.Venues
                 .FirstOrDefaultAsync(v => v.VenueId == venueId);
 
             if (venue == null)
@@ -1157,7 +1182,7 @@ namespace DIBA_Backend.Controllers
             var dayStart = date.Date;
             var dayEnd = dayStart.AddDays(1);
 
-            var bookings = await dbContext.Bookings
+            var bookings = await _dbContext.Bookings
                 .Include(b => b.BookingStatus)
                 .Where(b =>
                     b.VenueId == venueId &&
