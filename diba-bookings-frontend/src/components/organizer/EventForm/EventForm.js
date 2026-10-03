@@ -164,28 +164,40 @@ function EventForm({
                             </p>
                         </div>
 
-<BookingCalendar
-    selectedDate={selectedDate}
-    onDateSelect={handleDateSelect}
-    venueId={form.venueId}
-    onTimeSelect={(slot) => {
-        const toLocalInput = (date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, "0");
-            const day = String(date.getDate()).padStart(2, "0");
-            const hours = String(date.getHours()).padStart(2, "0");
-            const minutes = String(date.getMinutes()).padStart(2, "0");
+                        <BookingCalendar
+                            selectedDate={selectedDate}
+                            onDateSelect={handleDateSelect}
+                            venueId={form.venueId}
+                            onTimeSelect={(slot) => {
+                                const toLocalInput = (date) => {
+                                    const year = date.getFullYear();
+                                    const month = String(
+                                        date.getMonth() + 1
+                                    ).padStart(2, "0");
+                                    const day = String(
+                                        date.getDate()
+                                    ).padStart(2, "0");
+                                    const hours = String(
+                                        date.getHours()
+                                    ).padStart(2, "0");
+                                    const minutes = String(
+                                        date.getMinutes()
+                                    ).padStart(2, "0");
 
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
-        };
+                                    return `${year}-${month}-${day}T${hours}:${minutes}`;
+                                };
 
-        setForm({
-            ...form,
-            startDateTime: toLocalInput(slot.start),
-            endDateTime: toLocalInput(slot.end)
-        });
-    }}
-/>
+                                setForm({
+                                    ...form,
+                                    startDateTime: toLocalInput(
+                                        slot.start
+                                    ),
+                                    endDateTime: toLocalInput(
+                                        slot.end
+                                    )
+                                });
+                            }}
+                        />
                     </div>
                 )}
 
@@ -234,12 +246,77 @@ function EventForm({
                     />
                 </Field>
 
+{!editing && (
+    <div className="booking-acknowledgement">
+        <label className="acknowledgement-label">
+            <input
+                type="checkbox"
+                required
+                checked={form.acknowledgementAccepted || false}
+                onChange={(event) =>
+                    setForm({
+                        ...form,
+                        acknowledgementAccepted:
+                            event.target.checked
+                    })
+                }
+            />
+
+            <span>
+                I confirm that the information provided in this
+                booking is complete and accurate. I understand that
+                I am responsible for checking the event, venue,
+                equipment, and facility requirements for my booking.
+                I understand that DIBA Bookings provides the booking
+                platform and cannot be responsible for requirements
+                or information that I have not provided or specified.
+            </span>
+        </label>
+    </div>
+)}
+
                 {!editing && (
-                    <p className="form-note">
-                        This submits the event and venue booking as one
-                        action. Status after submission:{" "}
-                        <strong>Pending approval</strong>
-                    </p>
+                    <>
+                        <div className="booking-acknowledgement">
+                            <label className="acknowledgement-label">
+                                <input
+                                    type="checkbox"
+                                    required
+                                    checked={
+                                        form.acknowledgementAccepted ||
+                                        false
+                                    }
+                                    onChange={(e) =>
+                                        setForm({
+                                            ...form,
+                                            acknowledgementAccepted:
+                                                e.target.checked
+                                        })
+                                    }
+                                />
+
+                                <span>
+                                    I confirm that the information
+                                    provided in this booking is complete
+                                    and accurate. I understand that I am
+                                    responsible for checking the event,
+                                    venue, equipment, and facility
+                                    requirements for my booking. I
+                                    understand that DIBA Bookings
+                                    provides the booking platform and
+                                    cannot be responsible for
+                                    requirements or information that I
+                                    have not provided or specified.
+                                </span>
+                            </label>
+                        </div>
+
+                        <p className="form-note">
+                            This submits the event and venue booking as one
+                            action. Status after submission:{" "}
+                            <strong>Pending approval</strong>
+                        </p>
+                    </>
                 )}
 
                 <FormActions

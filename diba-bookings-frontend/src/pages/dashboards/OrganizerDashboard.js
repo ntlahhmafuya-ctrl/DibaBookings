@@ -37,7 +37,6 @@ const images = [
     diningImage
 ];
 
-
 const blankEvent = {
     eventName: "",
     eventDescription: "",
@@ -45,7 +44,8 @@ const blankEvent = {
     eventAttendance: "",
     startDateTime: "",
     endDateTime: "",
-    venueId: ""
+    venueId: "",
+    acknowledgementAccepted: false
 };
 
 
@@ -396,131 +396,110 @@ function OrganizerDashboard() {
     };
 
 
-    const submitEventAndBooking = async (
-        event
-    ) => {
-        event.preventDefault();
+const submitEventAndBooking = async (event) => {
+    event.preventDefault();
 
+    if (!eventForm.acknowledgementAccepted) {
+        toast.error(
+            "Please confirm the booking acknowledgement before submitting."
+        );
+        return;
+    }
 
-        if (!eventForm.venueId) {
-            toast.error(
-                "Choose a venue before submitting."
-            );
-            return;
-        }
+    if (!eventForm.venueId) {
+        toast.error(
+            "Choose a venue before submitting."
+        );
+        return;
+    }
 
+    if (
+        new Date(eventForm.endDateTime) <=
+        new Date(eventForm.startDateTime)
+    ) {
+        toast.error(
+            "End time must be after the start time."
+        );
+        return;
+    }
 
-        if (
-            new Date(
-                eventForm.endDateTime
-            ) <=
-            new Date(
-                eventForm.startDateTime
-            )
-        ) {
-            toast.error(
-                "End time must be after the start time."
-            );
-            return;
-        }
+    setSaving(true);
 
+    try {
+        toast.info(
+            "Checking venue availability..."
+        );
 
-        setSaving(true);
-
-
-        try {
-            toast.info(
-                "Checking venue availability..."
-            );
-
-
-            const availability =
-                await api.get(
-                    "/Bookings/availability",
-                    {
-                        params: {
-                            venueId:
-                                eventForm.venueId,
-                            startDateTime:
-                                new Date(
-                                    eventForm.startDateTime
-                                ).toISOString(),
-                            endDateTime:
-                                new Date(
-                                    eventForm.endDateTime
-                                ).toISOString()
-                        }
-                    }
-                );
-
-
-            if (
-                !availability.data.available
-            ) {
-                toast.error(
-                    availability.data.reason ||
-                        "This venue is unavailable for the selected period."
-                );
-                return;
+        const availability = await api.get(
+            "/Bookings/availability",
+            {
+                params: {
+                    venueId: eventForm.venueId,
+                    startDateTime: new Date(
+                        eventForm.startDateTime
+                    ).toISOString(),
+                    endDateTime: new Date(
+                        eventForm.endDateTime
+                    ).toISOString()
+                }
             }
+        );
 
-
-            const response =
-                await api.post(
-                    "/Events/with-booking",
-                    {
-                        ...eventForm,
-                        startDateTime:
-                            new Date(
-                                eventForm.startDateTime
-                            ).toISOString(),
-                        endDateTime:
-                            new Date(
-                                eventForm.endDateTime
-                            ).toISOString()
-                    }
-                );
-
-
-            setEvents((current) => [
-                ...current,
-                response.data.event
-            ]);
-
-
-            setBookings((current) => [
-                ...current,
-                response.data.booking
-            ]);
-
-
-            setActiveBooking(
-                response.data.booking
-            );
-
-            setActiveVenue(null);
-            setView("booking-detail");
-
-
-            toast.success(
-                "Your event and venue booking have been submitted successfully. It is pending staff approval."
-            );
-
-        } catch (error) {
+        if (!availability.data.available) {
             toast.error(
-                error.response?.status ===
-                    409
-                    ? "This venue is no longer available for the selected date and time. Please choose another time or venue."
-                    : errorText(
-                          error,
-                          "Unable to submit the event and booking."
-                      )
+                availability.data.reason ||
+                "This venue is unavailable for the selected period."
             );
-        } finally {
-            setSaving(false);
+            return;
         }
-    };
 
+        const response = await api.post(
+            "/Events/with-booking",
+            {
+                ...eventForm,
+                startDateTime: new Date(
+                    eventForm.startDateTime
+                ).toISOString(),
+                endDateTime: new Date(
+                    eventForm.endDateTime
+                ).toISOString()
+            }
+        );
+
+        setEvents((current) => [
+            ...current,
+            response.data.event
+        ]);
+
+        setBookings((current) => [
+            ...current,
+            response.data.booking
+        ]);
+
+        setActiveBooking(
+            response.data.booking
+        );
+
+        setActiveVenue(null);
+        setView("booking-detail");
+
+        toast.success(
+            "Your event and venue booking have been submitted successfully. It is pending staff approval."
+        );
+
+    } catch (error) {
+        toast.error(
+            error.response?.status === 409
+                ? "This venue is no longer available for the selected date and time. Please choose another time or venue."
+                : errorText(
+                    error,
+                    "Unable to submit the event and booking."
+                )
+        );
+    } finally {
+        setSaving(false);
+    }
+};
 
     const saveBooking = async (event) => {
         event.preventDefault();
@@ -1031,6 +1010,4 @@ function OrganizerDashboard() {
     </div>
     );
 }
-
-
 export default OrganizerDashboard;

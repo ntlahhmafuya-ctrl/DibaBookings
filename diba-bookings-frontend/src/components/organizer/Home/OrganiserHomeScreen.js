@@ -10,82 +10,146 @@ function Home({
     onBooking
 }) {
     return (
-        <section>
+        <section className="organizer-home">
 
-            <section>
-                <h2>Good morning, {firstName}</h2>
+            {/* Welcome section */}
+            <section className="welcome-panel">
+                <div className="welcome-content">
+                    <p className="section-kicker">
+                        YOUR WORKSPACE
+                    </p>
 
-                <p>
-                    Welcome to your booking workspace.
-                </p>
+                    <h2>
+                        Good morning, {firstName}
+                    </h2>
+
+                    <p>
+                        Welcome to your booking workspace.
+                        Find a venue, manage your events and
+                        keep track of your bookings.
+                    </p>
+                </div>
 
                 <button
                     type="button"
+                    className="primary-action"
                     onClick={onFind}
                 >
                     Find a Venue
                 </button>
             </section>
 
-            <section>
-                <p>YOUR SCHEDULE</p>
 
-                <h3>Upcoming bookings</h3>
+            {/* Upcoming bookings */}
+            <section className="home-section">
+
+                <div className="home-section-heading">
+                    <div>
+                        <p className="section-kicker">
+                            YOUR SCHEDULE
+                        </p>
+
+                        <h3>
+                            Upcoming bookings
+                        </h3>
+
+                        <p>
+                            Your next scheduled events.
+                        </p>
+                    </div>
+
+                    {upcoming.length > 0 && (
+                        <button
+                            type="button"
+                            className="text-action"
+                            onClick={() => onBooking(upcoming[0])}
+                        >
+                            View bookings
+                        </button>
+                    )}
+                </div>
+
 
                 {upcoming.length ? (
-                    <div>
-                        {upcoming
-                            .slice(0, 2)
-                            .map((booking) => (
-                                <BookingCard
-                                    key={booking.bookingId}
-                                    booking={booking}
-                                    onOpen={onBooking}
-                                />
-                            ))}
+                    <div className="home-bookings-grid">
+                        {upcoming.slice(0, 2).map((booking) => (
+                            <BookingCard
+                                key={booking.bookingId}
+                                booking={booking}
+                                onOpen={onBooking}
+                            />
+                        ))}
                     </div>
                 ) : (
-                    <Empty
-                        title="No bookings yet"
-                        text="Find a venue and create your first booking."
-                        action="Find a Venue"
-                        onAction={onFind}
-                    />
+                    <div className="home-empty-card">
+                        <Empty
+                            title="No bookings yet"
+                            text="Find a venue and create your first booking."
+                            action="Find a Venue"
+                            onAction={onFind}
+                        />
+                    </div>
                 )}
+
             </section>
 
+
+            {/* Recent activity */}
             {bookings.length > 0 && (
-                <section>
-                    <p>ACTIVITY</p>
+                <section className="home-section">
 
-                    <h3>Recent activity</h3>
+                    <div className="home-section-heading">
+                        <div>
+                            <p className="section-kicker">
+                                ACTIVITY
+                            </p>
 
-                    <div>
-                        {bookings
-                            .slice(0, 4)
-                            .map((booking) => (
-                                <div key={booking.bookingId}>
+                            <h3>
+                                Recent activity
+                            </h3>
 
+                            <p>
+                                A quick overview of your latest bookings.
+                            </p>
+                        </div>
+                    </div>
+
+
+                    <div className="home-activity-list">
+
+                        {bookings.slice(0, 4).map((booking) => (
+                            <button
+                                type="button"
+                                className="home-activity-item"
+                                key={booking.bookingId}
+                                onClick={() => onBooking(booking)}
+                            >
+                                <div className="activity-icon">
+                                    ▣
+                                </div>
+
+                                <div className="activity-content">
                                     <strong>
-                                        {booking.statusName ||
-                                            "Pending"}{" "}
-                                        booking
+                                        {booking.statusName || "Pending"} booking
                                     </strong>
 
-                                    <p>
-                                        {booking.eventName ||
-                                            "Event booking"}
-                                    </p>
-
-                                    <time>
-                                        {dateText(
-                                            getDate(booking)
-                                        )}
-                                    </time>
-
+                                    <span>
+                                        {booking.eventName || "Event booking"}
+                                    </span>
                                 </div>
-                            ))}
+
+                                <time>
+                                    {dateText(getDate(booking))}
+                                </time>
+
+                                <span className="activity-arrow">
+                                    →
+                                </span>
+                            </button>
+                        ))}
+
                     </div>
+
                 </section>
             )}
 

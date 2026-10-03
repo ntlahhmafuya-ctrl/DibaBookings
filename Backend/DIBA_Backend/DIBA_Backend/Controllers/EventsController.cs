@@ -272,6 +272,12 @@ namespace DIBA_Backend.Controllers
                 return Unauthorized("Invalid user ID.");
             }
 
+            if (!request.AcknowledgementAccepted)
+            {
+                return BadRequest(
+                    "You must acknowledge the booking requirements before submitting the booking.");
+            }
+
             // Reference: ErmaoCyber, "meeting-room-reservation-api".
             // Similar logic: validating that the requested time period
             // is logically valid before checking availability.
@@ -372,6 +378,13 @@ namespace DIBA_Backend.Controllers
                     StartDateTime = request.StartDateTime,
                     EndDateTime = request.EndDateTime,
                     SpecialRequirements = request.SpecialRequirements,
+
+                    AcknowledgementAccepted =
+                        request.AcknowledgementAccepted,
+
+                    AcknowledgementAcceptedAt =
+                        DateTime.UtcNow,
+
                     UserId = userId,
                     EventId = eventEntity.EventId,
                     VenueId = request.VenueId,
@@ -412,12 +425,15 @@ namespace DIBA_Backend.Controllers
                         StartDateTime = booking.StartDateTime,
                         EndDateTime = booking.EndDateTime,
                         SpecialRequirements =
-                            booking.SpecialRequirements,
+        booking.SpecialRequirements,
+
+                        AcknowledgementAccepted =
+        booking.AcknowledgementAccepted,
+
+                        AcknowledgementAcceptedAt =
+        booking.AcknowledgementAcceptedAt,
+
                         UserId = booking.UserId,
-                        EventId = booking.EventId,
-                        VenueId = booking.VenueId,
-                        BookingStatusId =
-                            booking.BookingStatusId,
                         StatusName =
                             pendingStatus.StatusName,
                         EventName =
