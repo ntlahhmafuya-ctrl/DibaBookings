@@ -1,0 +1,265 @@
+/* =========================================================
+   SHARED STYLES
+   ========================================================= */
+
+/* Section navigation */
+
+.section-nav {
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    gap: 26px;
+    margin-bottom: 30px;
+    overflow-x: auto;
+}
+
+.section-nav button {
+    background: none;
+    border: 0;
+    color: var(--muted);
+    padding: 0 0 13px;
+    white-space: nowrap;
+}
+
+.section-nav button.active {
+    border-bottom: 2px solid var(--blue);
+    color: var(--ink);
+    font-weight: 700;
+}
+
+
+/* Statistics */
+
+.stat-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+    margin-bottom: 28px;
+}
+
+.stat-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--blue);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 112px;
+    padding: 18px;
+}
+
+.stat-card span {
+    color: var(--muted);
+    font-size: 0.83rem;
+}
+
+.stat-card strong {
+    font-size: 2rem;
+    font-weight: 500;
+}
+
+.stat-green {
+    border-top-color: var(--green);
+}
+
+.stat-amber {
+    border-top-color: var(--amber);
+}
+
+.stat-red {
+    border-top-color: var(--red);
+}
+
+.stat-ink {
+    border-top-color: var(--ink);
+}
+
+
+/* Content layout */
+
+.content-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: 1.35fr 0.65fr;
+}
+
+
+/* Panels */
+
+.panel {
+    background: #fff;
+    border: 1px solid var(--line);
+    padding: 26px;
+}
+
+.panel-heading {
+    align-items: flex-start;
+    display: flex;
+    gap: 20px;
+    justify-content: space-between;
+    margin-bottom: 22px;
+}
+
+.panel h2 {
+    font-family: Georgia, serif;
+    font-size: 1.55rem;
+    font-weight: 400;
+    margin: 0;
+}
+
+
+/* Activity */
+
+.activity-row {
+    align-items: start;
+    border-top: 1px solid var(--line);
+    display: grid;
+    gap: 13px;
+    grid-template-columns: 10px 1fr auto;
+    padding: 15px 0;
+}
+
+.activity-dot {
+    background: #56a47f;
+    border-radius: 50%;
+    height: 8px;
+    margin-top: 6px;
+    width: 8px;
+}
+
+.activity-row strong {
+    font-size: 0.92rem;
+}
+
+.activity-row p {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 3px 0 0;
+}
+
+.activity-row time {
+    color: var(--muted);
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+
+/* Buttons */
+
+.text-button {
+    background: none;
+    border: 0;
+    color: var(--blue);
+    font-size: 0.85rem;
+}
+
+
+/* Tables */
+
+.table-panel {
+    overflow: hidden;
+}
+
+.search {
+    border-color: var(--line);
+    margin-bottom: 20px;
+    max-width: 380px;
+}
+
+.table {
+    margin: 0;
+    vertical-align: middle;
+}
+
+.table th {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.table td {
+    color: var(--ink);
+    font-size: 0.9rem;
+}
+
+.table-action {
+    background: none;
+    border: 0;
+    color: var(--blue);
+    font-size: 0.82rem;
+    margin-right: 12px;
+    padding: 0;
+}
+
+.table-action.danger {
+    color: var(--red);
+}
+
+
+/* Loading and empty states */
+
+.loading,
+.empty-state {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    justify-content: center;
+    min-height: 45vh;
+}
+
+.empty-state {
+    text-align: center;
+}
+
+.empty-state h1 {
+    font-family: Georgia, serif;
+    font-weight: 400;
+}
+
+
+/* Forms */
+
+.form-row {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr 1fr;
+    margin-bottom: 16px;
+}
+
+
+/* Workspace actions */
+
+.workspace-actions {
+    display: flex;
+    gap: 12px;
+    margin: -8px 0 26px;
+}
+
+
+/* Compact rows */
+
+.compact-row {
+    align-items: center;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    padding: 14px 0;
+}
+
+.compact-row p {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin: 4px 0 0;
+}
+
+
+/* Event type */
+
+.event-type {
+    color: var(--blue);
+    font-size: 0.78rem;
+}

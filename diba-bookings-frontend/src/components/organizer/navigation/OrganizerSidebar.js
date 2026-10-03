@@ -1,6 +1,6 @@
 import { toast } from "react-toastify";
 
-import { clearSession } from "../../../utils/dashboardUtils";
+import { clearSession } from "../../../utils/sessionUtils";
 
 const navItems = [
     ["⌂", "Dashboard", "dashboard"],

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import api from "../../../services/api";
-import Status from "../Status";
+import { getVenueFeatures } from "../../../services/venueService";
+import Status from "../../common/StatusBadge";
 
 function VenueDetails({ venue, image, onBack, onBook }) {
     const [features, setFeatures] = useState([]);
@@ -36,9 +36,7 @@ function VenueDetails({ venue, image, onBack, onBook }) {
             setFeatureError("");
 
             try {
-                const response = await api.get(
-                    `/Venues/${venue.venueId}/features`
-                );
+                const response = await getVenueFeatures(venue.venueId);
 
                 setFeatures(response.data || []);
             } catch (error) {

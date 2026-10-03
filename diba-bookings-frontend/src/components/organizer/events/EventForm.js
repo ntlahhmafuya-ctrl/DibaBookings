@@ -1,8 +1,8 @@
 import { useState } from "react";
-import FormIntro from "./FormIntro";
-import Field from "./Field";
-import FormActions from "./FormActions";
-import BookingCalendar from "../BookingCalender";
+import FormIntro from "./EventFormIntro";
+import Field from "./EventFormField";
+import FormActions from "./EventFormActions";
+import BookingCalendar from "../bookings/BookingAvailabilityCalendar";
 
 function EventForm({
     form,

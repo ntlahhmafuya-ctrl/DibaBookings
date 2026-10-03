@@ -1,0 +1,59 @@
+/* =========================================================
+   SHARED RESPONSIVE STYLES
+   ========================================================= */
+
+@media (max-width: 900px) {
+    .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    .organizer-header {
+        align-items: flex-start;
+    }
+
+    .header-user div {
+        display: none;
+    }
+
+    .header-title h1 {
+        font-size: 1.12rem;
+    }
+}
+
+@media (max-width: 560px) {
+    .stat-grid {
+        gap: 8px;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .stat-card {
+        min-height: 95px;
+        padding: 13px;
+    }
+
+    .stat-card strong {
+        font-size: 1.55rem;
+    }
+
+    .panel {
+        padding: 18px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .activity-row {
+        grid-template-columns: 10px 1fr;
+    }
+
+    .activity-row time {
+        grid-column: 2;
+    }
+}

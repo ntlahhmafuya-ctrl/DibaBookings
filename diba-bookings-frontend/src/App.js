@@ -5,7 +5,6 @@ import {
 } from "react-router-dom";
 
 import { ToastContainer } from "react-toastify";
-import "./App.css";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";

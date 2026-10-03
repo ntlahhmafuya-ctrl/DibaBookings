@@ -1,5 +1,5 @@
-import Empty from "../Empty";
-import { formatDate } from "../../../utils/dashboardUtils";
+import Empty from "../../common/EmptyState";
+import { formatDate } from "../../../utils/dateUtils";
 
 function NotificationsView({ notifications, onRead, onOpenBooking, onPay }) { return <section className="workspace-view"><div className="workspace-toolbar"><div><p className="section-kicker">STAY INFORMED</p><h2>Notifications</h2></div></div>{notifications.length ? <div className="notifications-list">{notifications.map((notification) => {
     const isApprovedNotification = notification.notificationType?.toLowerCase() === "booking approved" || notification.message?.toLowerCase().includes("approved");

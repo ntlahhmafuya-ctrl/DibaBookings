@@ -1,0 +1,247 @@
+/* =========================================================
+   ORGANISER HOME SCREEN
+   ========================================================= */
+
+.organizer-home {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+
+
+/* ---------------------------------------------------------
+   Welcome panel
+   --------------------------------------------------------- */
+
+.welcome-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    padding: 30px 32px;
+    background: #ffffff;
+    border: 1px solid #dfe5e9;
+    border-radius: 14px;
+}
+
+.welcome-content {
+    max-width: 700px;
+}
+
+.welcome-content .section-kicker {
+    margin-bottom: 8px;
+}
+
+.welcome-content h2 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.2;
+    color: var(--organizer-navy, #071b2c);
+}
+
+.welcome-content p:last-child {
+    margin: 10px 0 0;
+    color: #68747d;
+    line-height: 1.6;
+    font-size: 15px;
+}
+
+
+/* ---------------------------------------------------------
+   Home sections
+   --------------------------------------------------------- */
+
+.home-section {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.home-section-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.home-section-heading .section-kicker {
+    margin-bottom: 6px;
+}
+
+.home-section-heading h3 {
+    margin: 0;
+    font-size: 21px;
+    color: var(--organizer-navy, #071b2c);
+}
+
+.home-section-heading p:last-child {
+    margin: 6px 0 0;
+    color: #68747d;
+    font-size: 14px;
+}
+
+
+/* ---------------------------------------------------------
+   Upcoming bookings
+   --------------------------------------------------------- */
+
+.home-bookings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.home-bookings-grid .booking-card {
+    height: 100%;
+}
+
+
+/* ---------------------------------------------------------
+   Empty booking state
+   --------------------------------------------------------- */
+
+.home-empty-card {
+    background: #ffffff;
+    border: 1px solid #dfe5e9;
+    border-radius: 12px;
+    padding: 25px;
+}
+
+
+/* ---------------------------------------------------------
+   Recent activity
+   --------------------------------------------------------- */
+
+.home-activity-list {
+    background: #ffffff;
+    border: 1px solid #dfe5e9;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.home-activity-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 17px 20px;
+    border: 0;
+    border-bottom: 1px solid #edf0f2;
+    background: #ffffff;
+    text-align: left;
+    color: inherit;
+}
+
+.home-activity-item:last-child {
+    border-bottom: 0;
+}
+
+.home-activity-item:hover {
+    background: #f8fafb;
+}
+
+.activity-icon {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: #eef4f7;
+    color: #1a4b6b;
+    font-size: 17px;
+}
+
+.activity-content {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.activity-content strong {
+    color: #18232d;
+    font-size: 14px;
+}
+
+.activity-content span {
+    color: #68747d;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.home-activity-item time {
+    flex-shrink: 0;
+    color: #68747d;
+    font-size: 13px;
+}
+
+.activity-arrow {
+    flex-shrink: 0;
+    color: #68747d;
+    font-size: 18px;
+}
+
+
+/* ---------------------------------------------------------
+   Text action
+   --------------------------------------------------------- */
+
+.text-action {
+    border: 0;
+    background: transparent;
+    color: #1a4b6b;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 6px 0;
+}
+
+.text-action:hover {
+    color: #071b2c;
+}
+
+
+/* ---------------------------------------------------------
+   Responsive Home Screen
+   --------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    .welcome-panel {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .home-bookings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .organizer-home {
+        gap: 22px;
+    }
+
+    .welcome-panel {
+        padding: 22px;
+    }
+
+    .welcome-content h2 {
+        font-size: 24px;
+    }
+
+    .home-section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .home-activity-item {
+        padding: 15px;
+    }
+
+    .home-activity-item time {
+        display: none;
+    }
+}

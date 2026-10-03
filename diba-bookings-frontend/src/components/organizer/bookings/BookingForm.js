@@ -1,6 +1,6 @@
-import FormIntro from "../EventForm/FormIntro";
-import Field from "../EventForm/Field";
-import FormActions from "../EventForm/FormActions";
+import FormIntro from "../events/EventFormIntro";
+import Field from "../events/EventFormField";
+import FormActions from "../events/EventFormActions";
 
 const dateText = (value) => value ? new Date(value).toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" }) : "-";
 const timeText = (value) => value ? new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-";

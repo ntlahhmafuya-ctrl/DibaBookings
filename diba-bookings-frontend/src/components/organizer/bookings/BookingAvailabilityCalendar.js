@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import api from "../../services/api";
+import { getVenueAvailability } from "../../../services/bookingService";
 
 function BookingCalendar({
     selectedDate,
@@ -56,13 +56,9 @@ function BookingCalendar({
         setSelectedSlot(null);
 
         try {
-            const response = await api.get(
-                `/Bookings/venue/${venueId}/availability`,
-                {
-                    params: {
-                        date: formatDateForApi(date)
-                    }
-                }
+            const response = await getVenueAvailability(
+                venueId,
+                formatDateForApi(date)
             );
 
             setBookings(response.data || []);

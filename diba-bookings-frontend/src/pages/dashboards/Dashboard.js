@@ -1,12 +1,12 @@
 import AdminDashboard from "./AdminDashboard";
 import OrganizerDashboard from "./OrganizerDashboard";
-import UserDashboard from "./UserDashboard";
+import StaffDashboard from "./StaffDashboard";
 
 function Dashboard() {
     const role = localStorage.getItem("role");
 
     if (role === "Administrator") return <AdminDashboard />;
-    if (role === "Staff") return <UserDashboard />;
+    if (role === "Staff") return <StaffDashboard />;
     
     return <OrganizerDashboard />;
 }

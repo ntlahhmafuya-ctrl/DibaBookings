@@ -3,7 +3,7 @@ import conferenceCentre from "../../../assets/images/Conference centre.jpg";
 import theatreImage from "../../../assets/images/Theatre (2).jpg";
 import diningImage from "../../../assets/images/Dining Room.jpg";
 import VenueCard from "./VenueCard";
-import Empty from "../Empty";
+import Empty from "../../common/EmptyState";
 
 const images = [
     conferenceCentre,

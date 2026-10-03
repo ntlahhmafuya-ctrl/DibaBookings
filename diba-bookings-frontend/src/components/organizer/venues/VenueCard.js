@@ -1,4 +1,4 @@
-import Status from "../Status";
+import Status from "../../common/StatusBadge";
 
 function VenueCard({ venue, image, onOpen }) {
     return (
