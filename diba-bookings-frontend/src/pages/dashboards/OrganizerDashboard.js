@@ -91,17 +91,16 @@ function OrganizerDashboard() {
                     goTo={goTo}
                 />
 
-                {view === "dashboard" && (
-                    <OrganizerHome
-                        firstName={firstName}
-                        bookings={bookings}
-                        upcoming={upcoming}
-                        onFind={() =>
-                            goTo("venues")
-                        }
-                        onBooking={openBooking}
-                    />
-                )}
+{view === "dashboard" && (
+    <OrganizerHome
+        firstName={firstName}
+        venues={venues}
+        query={query}
+        setQuery={setQuery}
+        onOpenVenue={openVenue}
+        onFindVenue={() => goTo("venues")}
+    />
+)}
 
                 {view === "venues" && (
                     <VenueBrowser

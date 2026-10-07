@@ -3,12 +3,16 @@ import Status from "../../common/StatusBadge";
 function VenueCard({ venue, image, onOpen }) {
     return (
         <article className="browse-venue-card">
-            <img
-                src={image}
-                alt={venue.venueName}
-            />
+
+            <div className="venue-card-image">
+                <img
+                    src={image}
+                    alt={venue.venueName}
+                />
+            </div>
 
             <div className="browse-venue-body">
+
                 <div className="venue-card-title">
                     <h3>{venue.venueName}</h3>
 
@@ -17,12 +21,13 @@ function VenueCard({ venue, image, onOpen }) {
                     />
                 </div>
 
-                <p>
+                <p className="venue-card-description">
                     {venue.venueDescription ||
                         "A flexible venue for meetings, conferences and events."}
                 </p>
 
                 <div className="venue-facts">
+
                     <span>
                         ⌖{" "}
                         {venue.location ||
@@ -36,7 +41,9 @@ function VenueCard({ venue, image, onOpen }) {
                     <span>
                         R{" "}
                         {venue.price != null
-                            ? Number(venue.price).toLocaleString(
+                            ? Number(
+                                  venue.price
+                              ).toLocaleString(
                                   "en-ZA",
                                   {
                                       minimumFractionDigits: 2,
@@ -45,6 +52,7 @@ function VenueCard({ venue, image, onOpen }) {
                               )
                             : "Price on request"}
                     </span>
+
                 </div>
 
                 <button
@@ -52,9 +60,12 @@ function VenueCard({ venue, image, onOpen }) {
                     type="button"
                     onClick={() => onOpen(venue)}
                 >
-                    View details <span>↗</span>
+                    Show More
+                    <span>→</span>
                 </button>
+
             </div>
+
         </article>
     );
 }
