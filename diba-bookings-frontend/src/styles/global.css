@@ -1,4 +1,20 @@
-/* Global Styles */
+body {
+  margin: 0;
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* =========================================================
+   GLOBAL STYLES
+   ========================================================= */
 
 :root {
     --ink: #18232d;
@@ -19,12 +35,6 @@
 
 html {
     scroll-behavior: smooth;
-}
-
-body {
-    background: var(--paper);
-    color: var(--ink);
-    margin: 0;
 }
 
 button,

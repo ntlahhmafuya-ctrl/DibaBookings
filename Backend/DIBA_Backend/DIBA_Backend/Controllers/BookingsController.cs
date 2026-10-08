@@ -2,7 +2,6 @@
 using DIBA_Backend.Dto.Booking;
 using DIBA_Backend.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -11,77 +10,183 @@ namespace DIBA_Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+
+    // Reference: Microsoft Learn, "Role-based authorization in ASP.NET Core".
+    // Similar logic: restricting access to authenticated users.
+    // DIBA adaptation: the entire BookingsController requires the user
+    // to be authenticated before accessing booking information.
+    // https://learn.microsoft.com/aspnet/core/security/authorization/roles
     [Authorize]
     public class BookingsController : ControllerBase
     {
-        private readonly DIBABookingsDbContext dbContext;
+        private readonly DIBABookingsDbContext _dbContext;
 
         public BookingsController(DIBABookingsDbContext dbContext)
         {
-            this.dbContext = dbContext;
+            _dbContext = dbContext;
         }
+
 
         // GET: api/Bookings
         [HttpGet]
         public async Task<IActionResult> GetBookings()
         {
-            var bookingsQuery = dbContext.Bookings.AsQueryable();
-            if (!User.IsInRole("Staff") && !User.IsInRole("Administrator"))
+            IQueryable<Booking> bookingsQuery = _dbContext.Bookings;
+
+
+            // Reference: Microsoft Learn, "Role-based authorization in
+            // ASP.NET Core".
+            // Similar logic: checking the authenticated user's role before
+            // allowing access to information or operations.
+            // DIBA adaptation: Staff and Administrators can see all bookings,
+            // while Event Organisers are restricted to their own bookings.
+            // https://learn.microsoft.com/aspnet/core/security/authorization/roles
+            if (!User.IsInRole("Staff") &&
+                !User.IsInRole("Administrator"))
             {
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId)) return Unauthorized("User ID could not be determined.");
-                bookingsQuery = bookingsQuery.Where(b => b.UserId == userId);
+                // Reference: Microsoft Learn claims documentation.
+                // Similar logic: retrieving information about the current
+                // authenticated user from a claim.
+                // DIBA adaptation: NameIdentifier contains the DIBA UserId.
+                // https://learn.microsoft.com/aspnet/core/security/authentication/claims
+                var userIdClaim =
+                    User.FindFirst(ClaimTypes.NameIdentifier);
+
+                if (userIdClaim == null)
+                {
+                    return Unauthorized(
+                        "User ID could not be determined.");
+                }
+
+                if (!Guid.TryParse(
+                        userIdClaim.Value,
+                        out Guid userId))
+                {
+                    return Unauthorized("Invalid user ID.");
+                }
+
+
+                // DIBA-specific data-access rule:
+                // Event Organisers can only retrieve bookings belonging
+                // to their authenticated user account.
+                bookingsQuery = bookingsQuery
+                    .Where(booking =>
+                        booking.UserId == userId);
             }
 
+
+            // Similar EF Core projection pattern to the reviewed
+            // booking/authentication projects.
+            // DIBA adaptation: related User, Event, Venue and BookingStatus
+            // information is projected into a BookingResponseDto instead
+            // of exposing the complete database entity.
             var bookings = await bookingsQuery
-                .Include(b => b.User)
-                .Include(b => b.Event)
-                .Include(b => b.Venue)
-                .Include(b => b.BookingStatus)
-                .Select(b => new BookingResponseDto
+                .Include(booking => booking.User)
+                .Include(booking => booking.Event)
+                .Include(booking => booking.Venue)
+                .Include(booking => booking.BookingStatus)
+                .Select(booking => new BookingResponseDto
                 {
-                    BookingId = b.BookingId,
-                    BookingDate = b.BookingDate,
-                    StartDateTime = b.StartDateTime,
-                    EndDateTime = b.EndDateTime,
-                    SpecialRequirements = b.SpecialRequirements,
-                    AdminNotes = b.AdminNotes,
-                    UserId = b.UserId,
-                    EventId = b.EventId,
-                    VenueId = b.VenueId,
-                    BookingStatusId = b.BookingStatusId,
-                    StatusName = b.BookingStatus != null ? b.BookingStatus.StatusName : string.Empty,
-                    OrganiserName = b.User != null ? b.User.FirstName + " " + b.User.LastName : string.Empty,
-                    EventName = b.Event != null ? b.Event.EventName : string.Empty,
-                    VenueName = b.Venue != null ? b.Venue.VenueName : string.Empty
+                    BookingId = booking.BookingId,
+                    BookingDate = booking.BookingDate,
+                    StartDateTime = booking.StartDateTime,
+                    EndDateTime = booking.EndDateTime,
+                    SpecialRequirements = booking.SpecialRequirements,
+                    AdminNotes = booking.AdminNotes,
+                    UserId = booking.UserId,
+                    EventId = booking.EventId,
+                    VenueId = booking.VenueId,
+                    BookingStatusId = booking.BookingStatusId,
+
+
+                    AcknowledgementAccepted =
+        booking.AcknowledgementAccepted,
+
+                    AcknowledgementAcceptedAt =
+        booking.AcknowledgementAcceptedAt,
+
+                    StatusName =
+                        booking.BookingStatus != null
+                            ? booking.BookingStatus.StatusName
+                            : string.Empty,
+
+                    OrganiserName =
+                        booking.User != null
+                            ? booking.User.FirstName +
+                              " " +
+                              booking.User.LastName
+                            : string.Empty,
+
+                    EventName =
+                        booking.Event != null
+                            ? booking.Event.EventName
+                            : string.Empty,
+
+                    VenueName =
+                        booking.Venue != null
+                            ? booking.Venue.VenueName
+                            : string.Empty
                 })
                 .ToListAsync();
 
             return Ok(bookings);
         }
 
+
         // GET: api/Bookings/{id}
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetBooking(Guid id)
         {
-            var booking = await dbContext.Bookings
-                .Include(b => b.User)
-                .Include(b => b.Event)
-                .Include(b => b.Venue)
-                .Include(b => b.BookingStatus)
-                .FirstOrDefaultAsync(b => b.BookingId == id);
+            var booking = await _dbContext.Bookings
+                .Include(booking => booking.User)
+                .Include(booking => booking.Event)
+                .Include(booking => booking.Venue)
+                .Include(booking => booking.BookingStatus)
+                .FirstOrDefaultAsync(
+                    booking => booking.BookingId == id);
 
             if (booking == null)
             {
                 return NotFound("Booking not found.");
             }
 
-            if (!User.IsInRole("Staff") && !User.IsInRole("Administrator"))
+
+            // Reference: Microsoft Learn, "Role-based authorization in
+            // ASP.NET Core".
+            // Similar logic: using roles to determine whether a user can
+            // access another user's data.
+            // DIBA adaptation: Staff and Administrators can view any booking,
+            // while Event Organisers must own the booking.
+            if (!User.IsInRole("Staff") &&
+                !User.IsInRole("Administrator"))
             {
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId) || booking.UserId != userId) return Forbid();
+                var userIdClaim =
+                    User.FindFirst(ClaimTypes.NameIdentifier);
+
+                if (userIdClaim == null)
+                {
+                    return Unauthorized(
+                        "User ID could not be determined.");
+                }
+
+                if (!Guid.TryParse(
+                        userIdClaim.Value,
+                        out Guid userId))
+                {
+                    return Unauthorized("Invalid user ID.");
+                }
+
+                // DIBA-specific ownership check.
+                if (booking.UserId != userId)
+                {
+                    return Forbid();
+                }
             }
 
+
+            // DIBA adaptation:
+            // The database entity is converted to a response DTO so that
+            // only the information required by the frontend is returned.
             var response = new BookingResponseDto
             {
                 BookingId = booking.BookingId,
@@ -94,100 +199,255 @@ namespace DIBA_Backend.Controllers
                 EventId = booking.EventId,
                 VenueId = booking.VenueId,
                 BookingStatusId = booking.BookingStatusId,
-                StatusName = booking.BookingStatus?.StatusName ?? string.Empty,
-                OrganiserName = booking.User == null ? string.Empty : booking.User.FirstName + " " + booking.User.LastName,
-                EventName = booking.Event?.EventName ?? string.Empty,
-                VenueName = booking.Venue?.VenueName ?? string.Empty
+
+                StatusName =
+                    booking.BookingStatus?.StatusName ??
+                    string.Empty,
+
+                AcknowledgementAccepted =
+    booking.AcknowledgementAccepted,
+
+                AcknowledgementAcceptedAt =
+    booking.AcknowledgementAcceptedAt,
+
+                OrganiserName =
+                    booking.User == null
+                        ? string.Empty
+                        : booking.User.FirstName +
+                          " " +
+                          booking.User.LastName,
+
+                EventName =
+                    booking.Event?.EventName ??
+                    string.Empty,
+
+                VenueName =
+                    booking.Venue?.VenueName ??
+                    string.Empty
             };
 
             return Ok(response);
         }
 
+
+        // GET: api/Bookings/availability
         [HttpGet("availability")]
-        public async Task<IActionResult> CheckAvailability(Guid venueId, DateTime startDateTime, DateTime endDateTime)
+        public async Task<IActionResult> CheckAvailability(
+            Guid venueId,
+            DateTime startDateTime,
+            DateTime endDateTime)
         {
-            if (endDateTime <= startDateTime) return BadRequest("End date and time must be after the start date and time.");
-            var venue = await dbContext.Venues.FirstOrDefaultAsync(v => v.VenueId == venueId);
-            if (venue == null) return NotFound("Venue not found.");
-            if (!venue.VenueStatus.Equals("Available", StringComparison.OrdinalIgnoreCase)) return Ok(new { available = false, reason = "The selected venue is not currently available." });
 
-            var conflict = await dbContext.Bookings.AnyAsync(b =>
-                b.VenueId == venueId &&
-                b.StartDateTime < endDateTime &&
-                b.EndDateTime > startDateTime &&
-                b.BookingStatus != null &&
-                (b.BookingStatus.StatusName == "Pending" || b.BookingStatus.StatusName == "Approved"));
-            return Ok(new { available = !conflict, reason = conflict ? "The selected venue is already booked or awaiting approval for the requested time." : null });
-        }
-
-        // POST: api/Bookings
-        [HttpPost]
-        [Authorize(Roles = "Event Organiser")]
-        public async Task<IActionResult> CreateBooking(
-            CreateBookingDto createBookingDto)
-        {
-            // Get logged-in user's ID
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-
-            if (userIdClaim == null)
-            {
-                return Unauthorized("User ID could not be determined.");
-            }
-
-            if (!Guid.TryParse(userIdClaim.Value, out Guid userId))
-            {
-                return Unauthorized("Invalid user ID.");
-            }
-
-            // Validate dates
-            if (createBookingDto.EndDateTime <= createBookingDto.StartDateTime)
+            // Reference: ErmaoCyber, "Meeting Room Reservation API".
+            // Similar logic: validating that the requested time range is
+            // logically valid before checking room availability.
+            // The referenced project specifically identifies the rule that
+            // the end time must be after the start time.
+            // DIBA adaptation: the same validation is applied to venue
+            // bookings.
+            // https://github.com/ErmaoCyber/meeting-room-reservation-api
+            if (endDateTime <= startDateTime)
             {
                 return BadRequest(
                     "End date and time must be after the start date and time.");
             }
 
-            // Check that the event exists
-            var eventEntity = await dbContext.Events
-                .FirstOrDefaultAsync(e => e.EventId == createBookingDto.EventId);
 
-            if (eventEntity == null)
-            {
-                return NotFound("Event not found.");
-            }
-
-            // Check that the venue exists
-            var venue = await dbContext.Venues
-                .FirstOrDefaultAsync(v => v.VenueId == createBookingDto.VenueId);
+            // DIBA-specific existence check.
+            var venue = await _dbContext.Venues
+                .FirstOrDefaultAsync(
+                    venue => venue.VenueId == venueId);
 
             if (venue == null)
             {
                 return NotFound("Venue not found.");
             }
 
-            // Check venue status
+
+            // DIBA-specific venue availability rule.
+            // A venue must itself be marked Available before its booking
+            // schedule is considered.
             if (!venue.VenueStatus.Equals(
-                "Available",
-                StringComparison.OrdinalIgnoreCase))
+                    "Available",
+                    StringComparison.OrdinalIgnoreCase))
             {
-                return BadRequest("The selected venue is not currently available.");
+                return Ok(new
+                {
+                    available = false,
+                    reason =
+                        "The selected venue is not currently available."
+                });
             }
 
-            // Check that the event belongs to the logged-in organiser
+
+            // Reference: ErmaoCyber, "Meeting Room Reservation API".
+            // Similar logic: checking whether a requested time range overlaps
+            // with an existing room reservation.
+            //
+            // Reference: JedAngelo, "ConferenceBookingApi".
+            // Similar logic: conference booking includes conflict checking
+            // and booking status management.
+            //
+            // DIBA adaptation:
+            // - room becomes venue;
+            // - reservations become bookings;
+            // - only Pending and Approved bookings block the requested slot.
+            //
+            // https://github.com/ErmaoCyber/meeting-room-reservation-api
+            // https://github.com/JedAngelo/ConferenceBookingApi
+            var conflict = await _dbContext.Bookings
+                .AnyAsync(booking =>
+                    booking.VenueId == venueId &&
+
+                    // Existing booking starts before requested booking ends.
+                    booking.StartDateTime < endDateTime &&
+
+                    // Existing booking ends after requested booking starts.
+                    booking.EndDateTime > startDateTime &&
+
+                    booking.BookingStatus != null &&
+
+                    (
+                        booking.BookingStatus.StatusName == "Pending" ||
+                        booking.BookingStatus.StatusName == "Approved"
+                    ));
+
+            return Ok(new
+            {
+                available = !conflict,
+
+                reason = conflict
+                    ? "The selected venue is already booked or awaiting approval for the requested time."
+                    : null
+            });
+        }
+
+
+        // POST: api/Bookings
+        [HttpPost]
+
+        // Reference: Microsoft Learn, "Role-based authorization in
+        // ASP.NET Core".
+        // Similar logic: restricting a controller action to users
+        // belonging to a specific role.
+        // DIBA adaptation: only Event Organisers may create bookings.
+        // https://learn.microsoft.com/aspnet/core/security/authorization/roles
+        [Authorize(Roles = "Event Organiser")]
+        public async Task<IActionResult> CreateBooking(
+            CreateBookingDto createBookingDto)
+        {
+
+            // Reference: Microsoft Learn claims documentation.
+            // Similar logic: obtaining the current user's identity from
+            // a claim.
+            // DIBA adaptation: the UserId is used to associate the new
+            // booking with the authenticated Event Organiser.
+            var userIdClaim =
+    User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+            {
+                return Unauthorized(
+                    "User ID could not be determined.");
+            }
+
+            if (!Guid.TryParse(
+                    userIdClaim.Value,
+                    out Guid userId))
+            {
+                return Unauthorized("Invalid user ID.");
+            }
+
+            if (!createBookingDto.AcknowledgementAccepted)
+            {
+                return BadRequest(
+                    "You must acknowledge the booking requirements before submitting the booking.");
+            }
+
+            // Reference: ErmaoCyber, "Meeting Room Reservation API".
+            // Similar logic: the requested end time must be after the
+            // requested start time.
+            // DIBA adaptation: the rule is applied to venue bookings.
+            if (createBookingDto.EndDateTime <=
+                createBookingDto.StartDateTime)
+            {
+                return BadRequest(
+                    "End date and time must be after the start date and time.");
+            }
+
+
+            // DIBA-specific existence validation.
+            var eventEntity = await _dbContext.Events
+                .FirstOrDefaultAsync(
+                    eventEntity =>
+                        eventEntity.EventId ==
+                        createBookingDto.EventId);
+
+            if (eventEntity == null)
+            {
+                return NotFound("Event not found.");
+            }
+
+
+            // DIBA-specific existence validation.
+            var venue = await _dbContext.Venues
+                .FirstOrDefaultAsync(
+                    venue =>
+                        venue.VenueId ==
+                        createBookingDto.VenueId);
+
+            if (venue == null)
+            {
+                return NotFound("Venue not found.");
+            }
+
+
+            // DIBA-specific business rule.
+            if (!venue.VenueStatus.Equals(
+                    "Available",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(
+                    "The selected venue is not currently available.");
+            }
+
+
+            // DIBA-specific ownership rule:
+            // an Event Organiser may only create a booking for an event
+            // that belongs to that organiser.
             if (eventEntity.UserId != userId)
             {
                 return Forbid();
             }
 
-            // Check for overlapping bookings
-            var hasConflict = await dbContext.Bookings
-                .AnyAsync(b =>
-                    b.VenueId == createBookingDto.VenueId &&
-                    b.StartDateTime < createBookingDto.EndDateTime &&
-                    b.EndDateTime > createBookingDto.StartDateTime &&
-                    b.BookingStatus != null &&
+
+            // Reference: ErmaoCyber, "Meeting Room Reservation API".
+            // Similar logic: preventing double-booking by checking whether
+            // another reservation overlaps the requested time interval.
+            //
+            // Reference: JedAngelo, "ConferenceBookingApi".
+            // Similar logic: conference-room bookings include conflict
+            // checking before a booking is accepted.
+            //
+            // DIBA adaptation:
+            // the check uses VenueId, StartDateTime and EndDateTime and
+            // considers Pending and Approved bookings as conflicts.
+            var hasConflict = await _dbContext.Bookings
+                .AnyAsync(booking =>
+                    booking.VenueId ==
+                    createBookingDto.VenueId &&
+
+                    booking.StartDateTime <
+                    createBookingDto.EndDateTime &&
+
+                    booking.EndDateTime >
+                    createBookingDto.StartDateTime &&
+
+                    booking.BookingStatus != null &&
+
                     (
-                        b.BookingStatus.StatusName == "Pending" ||
-                        b.BookingStatus.StatusName == "Approved"
+                        booking.BookingStatus.StatusName == "Pending" ||
+                        booking.BookingStatus.StatusName == "Approved"
                     ));
 
             if (hasConflict)
@@ -196,9 +456,14 @@ namespace DIBA_Backend.Controllers
                     "The selected venue is already booked or awaiting approval for the requested time.");
             }
 
-            // Find Pending status
-            var pendingStatus = await dbContext.BookingStatuses
-                .FirstOrDefaultAsync(bs => bs.StatusName == "Pending");
+
+            // DIBA-specific status workflow.
+            // A newly created booking begins in the Pending state.
+            var pendingStatus = await _dbContext.BookingStatuses
+                .FirstOrDefaultAsync(
+                    bookingStatus =>
+                        bookingStatus.StatusName ==
+                        "Pending");
 
             if (pendingStatus == null)
             {
@@ -207,41 +472,58 @@ namespace DIBA_Backend.Controllers
                     "Pending booking status could not be found.");
             }
 
-            // Create booking
             var booking = new Booking
             {
                 BookingId = Guid.NewGuid(),
                 BookingDate = DateTime.UtcNow,
-                StartDateTime = createBookingDto.StartDateTime,
-                EndDateTime = createBookingDto.EndDateTime,
-                SpecialRequirements = createBookingDto.SpecialRequirements,
+                StartDateTime =
+                    createBookingDto.StartDateTime,
+                EndDateTime =
+                    createBookingDto.EndDateTime,
+                SpecialRequirements =
+                    createBookingDto.SpecialRequirements,
                 AdminNotes = null,
                 UserId = userId,
                 EventId = createBookingDto.EventId,
                 VenueId = createBookingDto.VenueId,
-                BookingStatusId = pendingStatus.BookingStatusId
+                BookingStatusId =
+                    pendingStatus.BookingStatusId,
+                        AcknowledgementAccepted = true,
+                AcknowledgementAcceptedAt = DateTime.UtcNow
             };
 
-            dbContext.Bookings.Add(booking);
+            _dbContext.Bookings.Add(booking);
 
-            await dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync();
 
+
+            // DIBA adaptation:
+            // return a DTO rather than directly returning the database entity.
             var response = new BookingResponseDto
             {
                 BookingId = booking.BookingId,
                 BookingDate = booking.BookingDate,
                 StartDateTime = booking.StartDateTime,
                 EndDateTime = booking.EndDateTime,
-                SpecialRequirements = booking.SpecialRequirements,
+                SpecialRequirements =
+                    booking.SpecialRequirements,
                 AdminNotes = booking.AdminNotes,
                 UserId = booking.UserId,
                 EventId = booking.EventId,
                 VenueId = booking.VenueId,
-                BookingStatusId = booking.BookingStatusId
+                BookingStatusId =
+                    booking.BookingStatusId,
+
+                AcknowledgementAccepted =
+                    booking.AcknowledgementAccepted,
+
+                AcknowledgementAcceptedAt =
+                    booking.AcknowledgementAcceptedAt
             };
 
             return Ok(response);
         }
+
 
         // PUT: api/Bookings/{id}
         [HttpPut("{id:guid}")]
@@ -250,106 +532,150 @@ namespace DIBA_Backend.Controllers
             Guid id,
             UpdateBookingDto updateBookingDto)
         {
-            // Get logged-in user's ID
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            // Similar claims-based user identification pattern used
+            // throughout ASP.NET Core authenticated applications.
+            // DIBA adaptation: the NameIdentifier claim identifies the
+            // organiser performing the update.
+            var userIdClaim =
+                User.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null)
             {
-                return Unauthorized("User ID could not be determined.");
+                return Unauthorized(
+                    "User ID could not be determined.");
             }
 
-            if (!Guid.TryParse(userIdClaim.Value, out Guid userId))
+            if (!Guid.TryParse(
+                    userIdClaim.Value,
+                    out Guid userId))
             {
                 return Unauthorized("Invalid user ID.");
             }
 
-            // Find booking
-            var booking = await dbContext.Bookings
-                .FirstOrDefaultAsync(b => b.BookingId == id);
+
+            var booking = await _dbContext.Bookings
+                .FirstOrDefaultAsync(
+                    booking =>
+                        booking.BookingId == id);
 
             if (booking == null)
             {
                 return NotFound("Booking not found.");
             }
 
-            // Make sure organiser owns the booking
+
+            // DIBA-specific ownership check.
+            // The authenticated organiser must own the booking being edited.
             if (booking.UserId != userId)
             {
                 return Forbid();
             }
 
-            // Only pending bookings can be edited
-            var currentStatus = await dbContext.BookingStatuses
+
+            // Reference: JedAngelo, "ConferenceBookingApi".
+            // Similar logic: bookings use explicit status values such as
+            // Pending, Approved and Rejected to control booking operations.
+            // DIBA adaptation: only Pending bookings may be edited.
+            var currentStatus = await _dbContext.BookingStatuses
                 .FirstOrDefaultAsync(
-                    bs => bs.BookingStatusId == booking.BookingStatusId);
+                    bookingStatus =>
+                        bookingStatus.BookingStatusId ==
+                        booking.BookingStatusId);
 
             if (currentStatus == null)
             {
-                return StatusCode(500, "Booking status could not be found.");
+                return StatusCode(
+                    500,
+                    "Booking status could not be found.");
             }
 
             if (!currentStatus.StatusName.Equals(
-                "Pending",
-                StringComparison.OrdinalIgnoreCase))
+                    "Pending",
+                    StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(
                     "Only pending bookings can be updated.");
             }
 
-            // Validate dates
-            if (updateBookingDto.EndDateTime <= updateBookingDto.StartDateTime)
+
+            // Reference: ErmaoCyber, "Meeting Room Reservation API".
+            // Similar time-range validation.
+            if (updateBookingDto.EndDateTime <=
+                updateBookingDto.StartDateTime)
             {
                 return BadRequest(
                     "End date and time must be after the start date and time.");
             }
 
-            // Check event exists
-            var eventEntity = await dbContext.Events
+
+            // DIBA-specific event ownership validation.
+            var eventEntity = await _dbContext.Events
                 .FirstOrDefaultAsync(
-                    e => e.EventId == updateBookingDto.EventId);
+                    eventEntity =>
+                        eventEntity.EventId ==
+                        updateBookingDto.EventId);
 
             if (eventEntity == null)
             {
                 return NotFound("Event not found.");
             }
 
-            // Make sure the event belongs to the organiser
             if (eventEntity.UserId != userId)
             {
                 return Forbid();
             }
 
-            // Check venue exists
-            var venue = await dbContext.Venues
+
+            var venue = await _dbContext.Venues
                 .FirstOrDefaultAsync(
-                    v => v.VenueId == updateBookingDto.VenueId);
+                    venue =>
+                        venue.VenueId ==
+                        updateBookingDto.VenueId);
 
             if (venue == null)
             {
                 return NotFound("Venue not found.");
             }
 
-            // Check venue status
             if (!venue.VenueStatus.Equals(
-                "Available",
-                StringComparison.OrdinalIgnoreCase))
+                    "Available",
+                    StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(
                     "The selected venue is not currently available.");
             }
 
-            // Check for booking conflicts
-            // Exclude the current booking from the conflict check.
-            var hasConflict = await dbContext.Bookings
-                .AnyAsync(b =>
-                    b.BookingId != id &&
-                    b.VenueId == updateBookingDto.VenueId &&
-                    b.StartDateTime < updateBookingDto.EndDateTime &&
-                    b.EndDateTime > updateBookingDto.StartDateTime &&
-                    b.BookingStatus != null &&
+
+            // Reference: ErmaoCyber, "Meeting Room Reservation API".
+            // Similar logic: prevent overlapping reservations when a booking
+            // is created or changed.
+            //
+            // DIBA adaptation: the current booking is excluded using
+            // `booking.BookingId != id`. This is necessary because the
+            // booking being edited should not conflict with itself.
+            //
+            // Reference: JedAngelo, "ConferenceBookingApi".
+            // Similar domain logic: booking updates are subject to
+            // conflict checking.
+            var hasConflict = await _dbContext.Bookings
+                .AnyAsync(booking =>
+                    booking.BookingId != id &&
+
+                    booking.VenueId ==
+                    updateBookingDto.VenueId &&
+
+                    booking.StartDateTime <
+                    updateBookingDto.EndDateTime &&
+
+                    booking.EndDateTime >
+                    updateBookingDto.StartDateTime &&
+
+                    booking.BookingStatus != null &&
+
                     (
-                        b.BookingStatus.StatusName == "Pending" ||
-                        b.BookingStatus.StatusName == "Approved"
+                        booking.BookingStatus.StatusName == "Pending" ||
+                        booking.BookingStatus.StatusName == "Approved"
                     ));
 
             if (hasConflict)
@@ -358,15 +684,24 @@ namespace DIBA_Backend.Controllers
                     "The selected venue is already booked or awaiting approval for the requested time.");
             }
 
-            // Update booking
-            booking.EventId = updateBookingDto.EventId;
-            booking.VenueId = updateBookingDto.VenueId;
-            booking.StartDateTime = updateBookingDto.StartDateTime;
-            booking.EndDateTime = updateBookingDto.EndDateTime;
+
+            booking.EventId =
+                updateBookingDto.EventId;
+
+            booking.VenueId =
+                updateBookingDto.VenueId;
+
+            booking.StartDateTime =
+                updateBookingDto.StartDateTime;
+
+            booking.EndDateTime =
+                updateBookingDto.EndDateTime;
+
             booking.SpecialRequirements =
                 updateBookingDto.SpecialRequirements;
 
-            await dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync();
+
 
             var response = new BookingResponseDto
             {
@@ -374,103 +709,154 @@ namespace DIBA_Backend.Controllers
                 BookingDate = booking.BookingDate,
                 StartDateTime = booking.StartDateTime,
                 EndDateTime = booking.EndDateTime,
-                SpecialRequirements = booking.SpecialRequirements,
+                SpecialRequirements =
+                    booking.SpecialRequirements,
                 AdminNotes = booking.AdminNotes,
                 UserId = booking.UserId,
                 EventId = booking.EventId,
                 VenueId = booking.VenueId,
-                BookingStatusId = booking.BookingStatusId
+                BookingStatusId =
+                    booking.BookingStatusId
             };
 
             return Ok(response);
         }
+
 
         // PUT: api/Bookings/{id}/approve
         [HttpPut("{id:guid}/approve")]
         [Authorize(Roles = "Administrator,Staff")]
         public async Task<IActionResult> ApproveBooking(Guid id)
         {
-
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            // Similar claims-based identification pattern:
+            // the authenticated staff member/administrator is identified
+            // from the NameIdentifier claim.
+            var userIdClaim =
+                User.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null)
             {
-                return Unauthorized("User ID could not be determined.");
+                return Unauthorized(
+                    "User ID could not be determined.");
             }
 
-            if (!Guid.TryParse(userIdClaim.Value, out Guid userId))
+            if (!Guid.TryParse(
+                    userIdClaim.Value,
+                    out Guid userId))
             {
                 return Unauthorized("Invalid user ID.");
             }
 
-            var booking = await dbContext.Bookings
-                .FirstOrDefaultAsync(b => b.BookingId == id);
+
+            var booking = await _dbContext.Bookings
+                .FirstOrDefaultAsync(
+                    booking =>
+                        booking.BookingId == id);
 
             if (booking == null)
             {
                 return NotFound("Booking not found.");
             }
 
-            var approvedStatus = await dbContext.BookingStatuses
-                .FirstOrDefaultAsync(bs => bs.StatusName == "Approved");
+
+            // Reference: JedAngelo, "ConferenceBookingApi".
+            // Similar logic: bookings have explicit status values and
+            // status changes form part of the booking workflow.
+            // DIBA adaptation: an Approved status is retrieved before
+            // changing the booking.
+            var approvedStatus = await _dbContext.BookingStatuses
+                .FirstOrDefaultAsync(
+                    bookingStatus =>
+                        bookingStatus.StatusName ==
+                        "Approved");
 
             if (approvedStatus == null)
             {
-                return StatusCode(500, "Approved booking status could not be found.");
+                return StatusCode(
+                    500,
+                    "Approved booking status could not be found.");
             }
 
-            var currentStatus = await dbContext.BookingStatuses
-                .FirstOrDefaultAsync(bs => bs.BookingStatusId == booking.BookingStatusId);
+
+            var currentStatus = await _dbContext.BookingStatuses
+                .FirstOrDefaultAsync(
+                    bookingStatus =>
+                        bookingStatus.BookingStatusId ==
+                        booking.BookingStatusId);
 
             if (currentStatus == null)
             {
-                return StatusCode(500, "Current booking status could not be found.");
+                return StatusCode(
+                    500,
+                    "Current booking status could not be found.");
             }
 
+
+            // Reference: JedAngelo, "ConferenceBookingApi".
+            // Similar logic: booking status controls what operations may
+            // be performed on a booking.
+            // DIBA adaptation: only Pending bookings may be approved.
             if (!currentStatus.StatusName.Equals(
-                "Pending",
-                StringComparison.OrdinalIgnoreCase))
+                    "Pending",
+                    StringComparison.OrdinalIgnoreCase))
             {
-                return BadRequest("Only pending bookings can be approved.");
+                return BadRequest(
+                    "Only pending bookings can be approved.");
             }
 
-            // Update booking status
-            booking.BookingStatusId = approvedStatus.BookingStatusId;
 
+            // Change the booking status.
+            booking.BookingStatusId =
+                approvedStatus.BookingStatusId;
+
+
+            // Reference: practical audit/event logging pattern.
+            // DIBA adaptation: an approval is considered an important
+            // system action, so the user performing it and the action
+            // timestamp are recorded.
             var auditLog = new AuditLog
             {
                 AuditLogId = Guid.NewGuid(),
                 Action = "Booking Approved",
-                LogDescription = $"Booking {booking.BookingId} was approved.",
+                LogDescription =
+                    $"Booking {booking.BookingId} was approved.",
                 Timestamp = DateTime.UtcNow,
                 UserId = userId
             };
 
-            dbContext.AuditLogs.Add(auditLog);
+            _dbContext.AuditLogs.Add(auditLog);
 
-            // Create notification for the Event Organiser
+
+            // DIBA-specific notification workflow.
+            // When a booking is approved, a notification is created for
+            // the Event Organiser who owns the booking.
             var notification = new Notification
             {
                 NotificationId = Guid.NewGuid(),
                 NotificationType = "Booking Approved",
-                Message = "Your venue booking has been approved.",
+                Message =
+                    "Your venue booking has been approved.",
                 DateCreated = DateTime.UtcNow,
                 IsRead = false,
                 UserId = booking.UserId,
                 BookingId = booking.BookingId
             };
 
-            dbContext.Notifications.Add(notification);
+            _dbContext.Notifications.Add(notification);
 
-            await dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync();
 
             return Ok(new
             {
-                message = "Booking approved successfully.",
-                bookingId = booking.BookingId,
-                status = approvedStatus.StatusName
+                message =
+                    "Booking approved successfully.",
+                bookingId =
+                    booking.BookingId,
+                status =
+                    approvedStatus.StatusName
             });
         }
+
 
         // PUT: api/Bookings/{id}/reject
         [HttpPut("{id:guid}/reject")]
@@ -480,28 +866,43 @@ namespace DIBA_Backend.Controllers
             RejectBookingDto rejectBookingDto)
         {
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            // Same claims-based user identification pattern used
+            // for the approval operation.
+            var userIdClaim =
+                User.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null)
             {
-                return Unauthorized("User ID could not be determined.");
+                return Unauthorized(
+                    "User ID could not be determined.");
             }
 
-            if (!Guid.TryParse(userIdClaim.Value, out Guid userId))
+            if (!Guid.TryParse(
+                    userIdClaim.Value,
+                    out Guid userId))
             {
                 return Unauthorized("Invalid user ID.");
             }
 
-            var booking = await dbContext.Bookings
-                .FirstOrDefaultAsync(b => b.BookingId == id);
+
+            var booking = await _dbContext.Bookings
+                .FirstOrDefaultAsync(
+                    booking =>
+                        booking.BookingId == id);
 
             if (booking == null)
             {
                 return NotFound("Booking not found.");
             }
 
-            var rejectedStatus = await dbContext.BookingStatuses
-                .FirstOrDefaultAsync(bs => bs.StatusName == "Rejected");
+
+            // Reference: JedAngelo, "ConferenceBookingApi".
+            // Similar logic: explicit rejected booking status.
+            var rejectedStatus = await _dbContext.BookingStatuses
+                .FirstOrDefaultAsync(
+                    bookingStatus =>
+                        bookingStatus.StatusName ==
+                        "Rejected");
 
             if (rejectedStatus == null)
             {
@@ -510,9 +911,12 @@ namespace DIBA_Backend.Controllers
                     "Rejected booking status could not be found.");
             }
 
-            var currentStatus = await dbContext.BookingStatuses
+
+            var currentStatus = await _dbContext.BookingStatuses
                 .FirstOrDefaultAsync(
-                    bs => bs.BookingStatusId == booking.BookingStatusId);
+                    bookingStatus =>
+                        bookingStatus.BookingStatusId ==
+                        booking.BookingStatusId);
 
             if (currentStatus == null)
             {
@@ -521,119 +925,187 @@ namespace DIBA_Backend.Controllers
                     "Current booking status could not be found.");
             }
 
+
+            // Reference: JedAngelo, "ConferenceBookingApi".
+            // Similar status-driven booking workflow.
+            // DIBA adaptation: only Pending bookings can be rejected.
             if (!currentStatus.StatusName.Equals(
-                "Pending",
-                StringComparison.OrdinalIgnoreCase))
+                    "Pending",
+                    StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(
                     "Only pending bookings can be rejected.");
             }
 
-            // Validate rejection reason
-            if (string.IsNullOrWhiteSpace(rejectBookingDto.Reason))
+
+            // DIBA-specific business rule:
+            // a rejection must contain a reason so that the organiser
+            // understands why the request was rejected.
+            if (string.IsNullOrWhiteSpace(
+                    rejectBookingDto.Reason))
             {
                 return BadRequest(
                     "A rejection reason is required.");
             }
 
-            // Save the rejection reason
-            booking.AdminNotes = rejectBookingDto.Reason;
 
-            // Change booking status
-            booking.BookingStatusId = rejectedStatus.BookingStatusId;
+            // Store the rejection reason and update the status.
+            booking.AdminNotes =
+                rejectBookingDto.Reason;
 
+            booking.BookingStatusId =
+                rejectedStatus.BookingStatusId;
+
+
+            // DIBA audit logging:
+            // rejection is recorded together with the reason and the
+            // authenticated staff member/administrator who performed it.
             var auditLog = new AuditLog
             {
                 AuditLogId = Guid.NewGuid(),
                 Action = "Booking Rejected",
-                LogDescription = $"Booking {booking.BookingId} was rejected. Reason: {rejectBookingDto.Reason}",
+                LogDescription =
+                    $"Booking {booking.BookingId} was rejected. " +
+                    $"Reason: {rejectBookingDto.Reason}",
                 Timestamp = DateTime.UtcNow,
                 UserId = userId
             };
 
-            dbContext.AuditLogs.Add(auditLog);
+            _dbContext.AuditLogs.Add(auditLog);
 
-            // Create notification
+
+            // DIBA notification workflow:
+            // the organiser receives the rejection reason as part of
+            // the notification.
             var notification = new Notification
             {
                 NotificationId = Guid.NewGuid(),
                 NotificationType = "Booking Rejected",
-                Message = $"Your venue booking has been rejected. Reason: {rejectBookingDto.Reason}",
+                Message =
+                    $"Your venue booking has been rejected. " +
+                    $"Reason: {rejectBookingDto.Reason}",
                 DateCreated = DateTime.UtcNow,
                 IsRead = false,
                 UserId = booking.UserId,
                 BookingId = booking.BookingId
             };
 
-            dbContext.Notifications.Add(notification);
+            _dbContext.Notifications.Add(notification);
 
-            await dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync();
 
             return Ok(new
             {
-                message = "Booking rejected successfully.",
-                bookingId = booking.BookingId,
-                status = rejectedStatus.StatusName,
-                reason = booking.AdminNotes
+                message =
+                    "Booking rejected successfully.",
+                bookingId =
+                    booking.BookingId,
+                status =
+                    rejectedStatus.StatusName,
+                reason =
+                    booking.AdminNotes
             });
         }
+
 
         // PUT: api/Bookings/{id}/cancel
         [HttpPut("{id:guid}/cancel")]
         public async Task<IActionResult> CancelBooking(Guid id)
         {
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            // Same claims-based identity retrieval used by the other
+            // booking operations.
+            var userIdClaim =
+                User.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null)
             {
-                return Unauthorized("User ID could not be determined.");
+                return Unauthorized(
+                    "User ID could not be determined.");
             }
 
-            if (!Guid.TryParse(userIdClaim.Value, out Guid userId))
+            if (!Guid.TryParse(
+                    userIdClaim.Value,
+                    out Guid userId))
             {
                 return Unauthorized("Invalid user ID.");
             }
 
-            var booking = await dbContext.Bookings
-                .FirstOrDefaultAsync(b => b.BookingId == id);
+
+            var booking = await _dbContext.Bookings
+                .FirstOrDefaultAsync(
+                    booking =>
+                        booking.BookingId == id);
 
             if (booking == null)
             {
                 return NotFound("Booking not found.");
             }
 
-            var isStaffOrAdmin =
+
+            // Reference: Microsoft Learn, "Role-based authorization
+            // in ASP.NET Core".
+            // Similar logic: checking whether an authenticated user
+            // belongs to one of the permitted roles.
+            // DIBA adaptation: Staff and Administrators receive broader
+            // cancellation permissions.
+            var isStaffOrAdministrator =
                 User.IsInRole("Staff") ||
                 User.IsInRole("Administrator");
 
-            if (booking.UserId != userId && !isStaffOrAdmin)
+
+            // DIBA-specific ownership and role rule:
+            // Event Organisers may cancel their own bookings, while
+            // Staff and Administrators may cancel any booking.
+            if (booking.UserId != userId &&
+                !isStaffOrAdministrator)
             {
                 return Forbid();
             }
 
-            var cancelledStatus = await dbContext.BookingStatuses
-                .FirstOrDefaultAsync(bs => bs.StatusName == "Cancelled");
+
+            // Reference: JedAngelo, "ConferenceBookingApi".
+            // Similar logic: booking status is used to control the
+            // allowed operations on a reservation.
+            var cancelledStatus = await _dbContext.BookingStatuses
+                .FirstOrDefaultAsync(
+                    bookingStatus =>
+                        bookingStatus.StatusName ==
+                        "Cancelled");
 
             if (cancelledStatus == null)
             {
-                return StatusCode(500, "Cancelled booking status could not be found.");
+                return StatusCode(
+                    500,
+                    "Cancelled booking status could not be found.");
             }
 
-            var currentStatus = await dbContext.BookingStatuses
-                .FirstOrDefaultAsync(bs => bs.BookingStatusId == booking.BookingStatusId);
+
+            var currentStatus = await _dbContext.BookingStatuses
+                .FirstOrDefaultAsync(
+                    bookingStatus =>
+                        bookingStatus.BookingStatusId ==
+                        booking.BookingStatusId);
 
             if (currentStatus == null)
             {
-                return StatusCode(500, "Current booking status could not be found.");
+                return StatusCode(
+                    500,
+                    "Current booking status could not be found.");
             }
 
+
+            // DIBA-specific state-transition rule:
+            // Rejected, Cancelled and Completed bookings cannot be
+            // cancelled again.
             if (currentStatus.StatusName.Equals(
-                "Rejected",
-                StringComparison.OrdinalIgnoreCase) ||
+                    "Rejected",
+                    StringComparison.OrdinalIgnoreCase) ||
+
                 currentStatus.StatusName.Equals(
                     "Cancelled",
                     StringComparison.OrdinalIgnoreCase) ||
+
                 currentStatus.StatusName.Equals(
                     "Completed",
                     StringComparison.OrdinalIgnoreCase))
@@ -642,41 +1114,54 @@ namespace DIBA_Backend.Controllers
                     "This booking cannot be cancelled in its current status.");
             }
 
-            // Update booking status
-            booking.BookingStatusId = cancelledStatus.BookingStatusId;
 
+            // Change the booking status.
+            booking.BookingStatusId =
+                cancelledStatus.BookingStatusId;
+
+
+            // DIBA audit logging:
+            // cancellation records which authenticated user performed
+            // the action and when it occurred.
             var auditLog = new AuditLog
             {
                 AuditLogId = Guid.NewGuid(),
                 Action = "Booking Cancelled",
-                LogDescription = $"Booking {booking.BookingId} was cancelled.",
+                LogDescription =
+                    $"Booking {booking.BookingId} was cancelled.",
                 Timestamp = DateTime.UtcNow,
                 UserId = userId
             };
 
-            dbContext.AuditLogs.Add(auditLog);
+            _dbContext.AuditLogs.Add(auditLog);
 
-            // Create notification for the Event Organiser
+
+            // DIBA notification workflow:
+            // the organiser is informed when the booking is cancelled.
             var notification = new Notification
             {
                 NotificationId = Guid.NewGuid(),
                 NotificationType = "Booking Cancelled",
-                Message = "Your venue booking has been cancelled.",
+                Message =
+                    "Your venue booking has been cancelled.",
                 DateCreated = DateTime.UtcNow,
                 IsRead = false,
                 UserId = booking.UserId,
                 BookingId = booking.BookingId
             };
 
-            dbContext.Notifications.Add(notification);
+            _dbContext.Notifications.Add(notification);
 
-            await dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync();
 
             return Ok(new
             {
-                message = "Booking cancelled successfully.",
-                bookingId = booking.BookingId,
-                status = cancelledStatus.StatusName
+                message =
+                    "Booking cancelled successfully.",
+                bookingId =
+                    booking.BookingId,
+                status =
+                    cancelledStatus.StatusName
             });
         }
 
@@ -686,7 +1171,7 @@ namespace DIBA_Backend.Controllers
     Guid venueId,
     DateTime date)
         {
-            var venue = await dbContext.Venues
+            var venue = await _dbContext.Venues
                 .FirstOrDefaultAsync(v => v.VenueId == venueId);
 
             if (venue == null)
@@ -697,7 +1182,7 @@ namespace DIBA_Backend.Controllers
             var dayStart = date.Date;
             var dayEnd = dayStart.AddDays(1);
 
-            var bookings = await dbContext.Bookings
+            var bookings = await _dbContext.Bookings
                 .Include(b => b.BookingStatus)
                 .Where(b =>
                     b.VenueId == venueId &&

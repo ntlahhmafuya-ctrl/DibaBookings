@@ -54,6 +54,12 @@ namespace DIBA_Backend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("AcknowledgementAccepted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("AcknowledgementAcceptedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("AdminNotes")
                         .HasColumnType("nvarchar(max)");
 

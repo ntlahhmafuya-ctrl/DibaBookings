@@ -3,7 +3,6 @@ using DIBA_Backend.Dto.Venue;
 using DIBA_Backend.Dto.VenueFeature;
 using DIBA_Backend.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,64 +10,87 @@ namespace DIBA_Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+
+    // Reference: Microsoft Learn, "Role-based authorization in ASP.NET Core".
+    // Similar logic: protecting an API controller so that only authenticated
+    // users can access its endpoints.
+    // DIBA adaptation: all venue-related endpoints require authentication,
+    // while write operations below have additional role restrictions.
     [Authorize]
     public class VenuesController : ControllerBase
     {
-        private readonly DIBABookingsDbContext dbContext; public VenuesController(DIBABookingsDbContext dbContext) 
-        { 
-            this.dbContext = dbContext; 
+        private readonly DIBABookingsDbContext _dbContext;
+
+        public VenuesController(DIBABookingsDbContext dbContext)
+        {
+            _dbContext = dbContext;
         }
 
+        // GET: api/Venues
         [HttpGet]
         public async Task<IActionResult> GetVenues()
         {
-            var venues = await dbContext.Venues
-                .Select(v => new VenueResponseDto
+            var venues = await _dbContext.Venues
+
+                // Reference: Microsoft Learn, Entity Framework Core querying.
+                // Similar logic: projecting database records directly into
+                // objects containing only the data required by the API response.
+                // DIBA adaptation: VenueResponseDto is used so that the API
+                // does not expose the complete Venue entity to the frontend.
+                .Select(venue => new VenueResponseDto
                 {
-                    VenueId = v.VenueId,
-                    VenueName = v.VenueName,
-                    VenueDescription = v.VenueDescription,
-                    Capacity = v.Capacity,
-                    Price = v.Price,
-                    Location = v.Location,
-                    Latitude = v.Latitude,
-                    Longitude = v.Longitude,
-                    VenueStatus = v.VenueStatus
+                    VenueId = venue.VenueId,
+                    VenueName = venue.VenueName,
+                    VenueDescription = venue.VenueDescription,
+                    Capacity = venue.Capacity,
+                    Price = venue.Price,
+                    Location = venue.Location,
+                    Latitude = venue.Latitude,
+                    Longitude = venue.Longitude,
+                    VenueStatus = venue.VenueStatus
                 })
                 .ToListAsync();
 
             return Ok(venues);
         }
 
+        // GET: api/Venues/{id}
         [HttpGet("{id:guid}")]
-        public async Task<IActionResult> GetVenue(Guid id) 
-        { 
-            var venue = await dbContext.Venues
-                .FirstOrDefaultAsync(v => v.VenueId == id); 
+        public async Task<IActionResult> GetVenue(Guid id)
+        {
+            var venue = await _dbContext.Venues
+                .FirstOrDefaultAsync(venue => venue.VenueId == id);
 
-            if (venue == null) 
-            { 
-                return NotFound("Venue not found."); 
+            if (venue == null)
+            {
+                return NotFound("Venue not found.");
             }
-            
-            var response = new VenueResponseDto 
-            { 
-                VenueId = venue.VenueId, 
-                VenueName = venue.VenueName, 
+
+            var response = new VenueResponseDto
+            {
+                VenueId = venue.VenueId,
+                VenueName = venue.VenueName,
                 VenueDescription = venue.VenueDescription,
                 Capacity = venue.Capacity,
                 Price = venue.Price,
                 Location = venue.Location,
                 Latitude = venue.Latitude,
                 Longitude = venue.Longitude,
-                VenueStatus = venue.VenueStatus 
+                VenueStatus = venue.VenueStatus
             };
-            return Ok(response); 
+
+            return Ok(response);
         }
 
+        // POST: api/Venues
         [HttpPost]
+
+        // Reference: Microsoft Learn, "Role-based authorization in ASP.NET Core".
+        // Similar logic: restricting a write operation to specific roles.
+        // DIBA adaptation: venue creation is limited to Administrators and Staff
+        // because these users manage the conference centre's venue information.
         [Authorize(Roles = "Administrator,Staff")]
-        public async Task<IActionResult> CreateVenue(CreateVenueDto createVenueDto) 
+        public async Task<IActionResult> CreateVenue(CreateVenueDto createVenueDto)
         {
             var venue = new Venue
             {
@@ -82,8 +104,11 @@ namespace DIBA_Backend.Controllers
                 Longitude = createVenueDto.Longitude,
                 VenueStatus = createVenueDto.VenueStatus
             };
-            dbContext.Venues.Add(venue); 
-            await dbContext.SaveChangesAsync();
+
+            _dbContext.Venues.Add(venue);
+
+            await _dbContext.SaveChangesAsync();
+
             var response = new VenueResponseDto
             {
                 VenueId = venue.VenueId,
@@ -96,77 +121,108 @@ namespace DIBA_Backend.Controllers
                 Longitude = venue.Longitude,
                 VenueStatus = venue.VenueStatus
             };
-            return CreatedAtAction(nameof(GetVenue), new { id = venue.VenueId }, response); 
+
+            // Similar ASP.NET Core API pattern: returning a 201 Created response
+            // together with a route to retrieve the newly created resource.
+            // DIBA adaptation: GetVenue is used as the retrieval endpoint.
+            return CreatedAtAction(
+                nameof(GetVenue),
+                new { id = venue.VenueId },
+                response);
         }
 
+        // PUT: api/Venues/{id}
         [HttpPut("{id:guid}")]
+
+        // Reference: Microsoft Learn, "Role-based authorization in ASP.NET Core".
+        // Similar logic: limiting modification of protected resources to
+        // authorised application roles.
+        // DIBA adaptation: only Administrators and Staff can modify venues.
         [Authorize(Roles = "Administrator,Staff")]
         public async Task<IActionResult> UpdateVenue(
-            Guid id, 
-            UpdateVenueDto updateVenueDto) 
-        { 
-            var venue = await dbContext.Venues.FirstOrDefaultAsync(v => v.VenueId == id); 
-            
-            if (venue == null)
-            { 
-                return NotFound("Venue not found."); 
-            }
+            Guid id,
+            UpdateVenueDto updateVenueDto)
+        {
+            var venue = await _dbContext.Venues
+                .FirstOrDefaultAsync(venue => venue.VenueId == id);
 
-            venue.VenueName = updateVenueDto.VenueName;
-            venue.VenueDescription = updateVenueDto.VenueDescription;
-            venue.Capacity = updateVenueDto.Capacity;
-            venue.Price = updateVenueDto.Price;
-            venue.Location = updateVenueDto.Location;
-            venue.Latitude = updateVenueDto.Latitude;
-            venue.Longitude = updateVenueDto.Longitude;
-            venue.VenueStatus = updateVenueDto.VenueStatus;
+    if (venue == null)
+    {
+        return NotFound("Venue not found.");
+    }
 
-            await dbContext.SaveChangesAsync(); 
+    venue.VenueName = updateVenueDto.VenueName;
+    venue.VenueDescription = updateVenueDto.VenueDescription;
+    venue.Capacity = updateVenueDto.Capacity;
+    venue.Price = updateVenueDto.Price;
+    venue.Location = updateVenueDto.Location;
+    venue.Latitude = updateVenueDto.Latitude;
+    venue.Longitude = updateVenueDto.Longitude;
+    venue.VenueStatus = updateVenueDto.VenueStatus;
 
-            return Ok(new 
-            { 
+    await _dbContext.SaveChangesAsync();
+
+            return Ok(new
+            {
                 message = "Venue updated successfully."
             });
         }
 
-        //VenueFeatures
+        // Venue Features
 
-
+        // GET: api/Venues/{venueId}/features
         [HttpGet("{venueId:guid}/features")]
         public async Task<IActionResult> GetVenueFeatures(Guid venueId)
         {
-            var venueExists = await dbContext.Venues
-                .AnyAsync(v => v.VenueId == venueId);
+            // Similar relationship-validation logic:
+            // verify that the parent resource exists before retrieving
+            // its related child records.
+            // DIBA adaptation: a VenueFeature cannot be requested for
+            // a venue that does not exist.
+            var venueExists = await _dbContext.Venues
+                .AnyAsync(venue => venue.VenueId == venueId);
 
             if (!venueExists)
             {
                 return NotFound("Venue not found.");
             }
 
-            var features = await dbContext.VenueFeatures
-                .Where(vf => vf.VenueId == venueId)
-                .Select(vf => new VenueFeatureResponseDto
+            var features = await _dbContext.VenueFeatures
+
+                // Reference: Microsoft Learn, Entity Framework Core querying.
+                // Similar logic: filtering related records using a foreign key
+                // before projecting the results into response objects.
+                // DIBA adaptation: only features belonging to the requested
+                // venue are returned.
+                .Where(venueFeature => venueFeature.VenueId == venueId)
+
+                .Select(venueFeature => new VenueFeatureResponseDto
                 {
-                    VenueFeatureId = vf.VenueFeatureId,
-                    FeatureName = vf.FeatureName,
-                    FeatureDescription = vf.FeatureDescription,
-                    FeatureStatus = vf.FeatureStatus,
-                    VenueId = vf.VenueId
+                    VenueFeatureId = venueFeature.VenueFeatureId,
+                    FeatureName = venueFeature.FeatureName,
+                    FeatureDescription = venueFeature.FeatureDescription,
+                    FeatureStatus = venueFeature.FeatureStatus,
+                    VenueId = venueFeature.VenueId
                 })
                 .ToListAsync();
 
             return Ok(features);
         }
 
-
+        // POST: api/Venues/{venueId}/features
         [HttpPost("{venueId:guid}/features")]
+
+        // Reference: Microsoft Learn, "Role-based authorization in ASP.NET Core".
+        // Similar logic: role-based restriction of resource creation.
+        // DIBA adaptation: only Administrators and Staff can add features
+        // to conference centre venues.
         [Authorize(Roles = "Administrator,Staff")]
         public async Task<IActionResult> CreateVenueFeature(
             Guid venueId,
             CreateVenueFeatureDto createVenueFeatureDto)
         {
-            var venueExists = await dbContext.Venues
-                .AnyAsync(v => v.VenueId == venueId);
+            var venueExists = await _dbContext.Venues
+                .AnyAsync(venue => venue.VenueId == venueId);
 
             if (!venueExists)
             {
@@ -179,12 +235,16 @@ namespace DIBA_Backend.Controllers
                 FeatureName = createVenueFeatureDto.FeatureName,
                 FeatureDescription = createVenueFeatureDto.FeatureDescription,
                 FeatureStatus = createVenueFeatureDto.FeatureStatus,
+
+                // DIBA-specific parent-child relationship:
+                // the new feature is linked to the selected venue
+                // through the VenueId foreign key.
                 VenueId = venueId
             };
 
-            dbContext.VenueFeatures.Add(venueFeature);
+            _dbContext.VenueFeatures.Add(venueFeature);
 
-            await dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync();
 
             var response = new VenueFeatureResponseDto
             {
@@ -198,17 +258,26 @@ namespace DIBA_Backend.Controllers
             return Ok(response);
         }
 
+        // PUT: api/Venues/{venueId}/features/{featureId}
         [HttpPut("{venueId:guid}/features/{featureId:guid}")]
+
+        // Reference: Microsoft Learn, "Role-based authorization in ASP.NET Core".
+        // Similar logic: only authorised roles may modify protected resources.
         [Authorize(Roles = "Administrator,Staff")]
         public async Task<IActionResult> UpdateVenueFeature(
             Guid venueId,
             Guid featureId,
             UpdateVenueFeatureDto updateVenueFeatureDto)
         {
-            var venueFeature = await dbContext.VenueFeatures
-                .FirstOrDefaultAsync(vf =>
-                    vf.VenueFeatureId == featureId &&
-                    vf.VenueId == venueId);
+            // Similar parent-child resource validation:
+            // both identifiers are checked so that a feature cannot be
+            // modified through a different venue's route.
+            // DIBA adaptation: the feature must belong to the venue
+            // specified in the URL.
+            var venueFeature = await _dbContext.VenueFeatures
+                .FirstOrDefaultAsync(venueFeature =>
+                    venueFeature.VenueFeatureId == featureId &&
+                    venueFeature.VenueId == venueId);
 
             if (venueFeature == null)
             {
@@ -219,7 +288,7 @@ namespace DIBA_Backend.Controllers
             venueFeature.FeatureDescription = updateVenueFeatureDto.FeatureDescription;
             venueFeature.FeatureStatus = updateVenueFeatureDto.FeatureStatus;
 
-            await dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync();
 
             var response = new VenueFeatureResponseDto
             {
@@ -233,34 +302,43 @@ namespace DIBA_Backend.Controllers
             return Ok(response);
         }
 
-
-
+        // DELETE: api/Venues/{venueId}/features/{featureId}
         [HttpDelete("{venueId:guid}/features/{featureId:guid}")]
+
+        // Reference: Microsoft Learn, "Role-based authorization in ASP.NET Core".
+        // Similar logic: restricting deletion of application data to
+        // authorised roles.
+
+        // DIBA adaptation: only Administrators and Staff can remove
+        // venue features.
         [Authorize(Roles = "Administrator,Staff")]
         public async Task<IActionResult> DeleteVenueFeature(
             Guid venueId,
             Guid featureId)
         {
-            var venueFeature = await dbContext.VenueFeatures
-                .FirstOrDefaultAsync(vf =>
-                    vf.VenueFeatureId == featureId &&
-                    vf.VenueId == venueId);
+            // Similar parent-child validation:
+            // the query checks both the child ID and its parent ID before
+            // allowing the record to be deleted.
+            // DIBA adaptation: prevents a feature belonging to another venue
+            // from being selected through this endpoint.
+            var venueFeature = await _dbContext.VenueFeatures
+                .FirstOrDefaultAsync(venueFeature =>
+                    venueFeature.VenueFeatureId == featureId &&
+                    venueFeature.VenueId == venueId);
 
             if (venueFeature == null)
             {
                 return NotFound("Venue feature not found.");
             }
 
-            dbContext.VenueFeatures.Remove(venueFeature);
+            _dbContext.VenueFeatures.Remove(venueFeature);
 
-            await dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync();
 
             return Ok(new
             {
                 message = "Venue feature deleted successfully."
             });
         }
-
-
     }
 }

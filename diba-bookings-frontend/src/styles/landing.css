@@ -1,4 +1,6 @@
-/* Public Landing Page */
+/* =========================================================
+   PUBLIC LANDING PAGE
+   ========================================================= */
 
 .landing-page {
     --landing-navy: #071b2c;
@@ -96,6 +98,7 @@
     color: var(--landing-yellow);
     margin-left: 8px;
 }
+
 
 /* Hero */
 
@@ -214,6 +217,7 @@
     width: 46px;
 }
 
+
 /* Discovery */
 
 .discovery-wrap {
@@ -254,7 +258,6 @@
     align-items: stretch;
     display: flex;
     flex: 1;
-    gap: 0;
 }
 
 .discovery-form label {
@@ -299,6 +302,7 @@
 .search-button span {
     color: var(--landing-yellow);
 }
+
 
 /* General landing sections */
 
@@ -374,6 +378,7 @@
     font-weight: 400;
 }
 
+
 /* Features */
 
 .feature-section {
@@ -448,6 +453,7 @@
     position: absolute;
 }
 
+
 /* Venues */
 
 .venue-section {
@@ -517,6 +523,7 @@
     margin-left: 7px;
 }
 
+
 /* How it works */
 
 .steps-section {
@@ -577,6 +584,7 @@
     max-width: 190px;
 }
 
+
 /* Value section */
 
 .value-section {
@@ -606,6 +614,7 @@
     color: var(--landing-blue);
     font-size: 0.78rem;
 }
+
 
 /* Call to action */
 
@@ -640,6 +649,7 @@
     border-color: #b9d0d5;
     color: #fff;
 }
+
 
 /* Footer */
 
@@ -701,7 +711,8 @@
     padding-top: 18px;
 }
 
-/* Responsive */
+
+/* Landing responsive */
 
 @media (max-width: 800px) {
     .landing-nav {

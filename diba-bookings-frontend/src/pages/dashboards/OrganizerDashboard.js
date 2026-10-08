@@ -1,1036 +1,247 @@
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "react-toastify";
-
-import api from "../../services/api";
-
 import conferenceCentre from "../../assets/images/Conference centre.jpg";
 import theatreImage from "../../assets/images/Theatre (2).jpg";
 import diningImage from "../../assets/images/Dining Room.jpg";
 
-import { Loading } from "./DashboardShared";
+import LoadingIndicator from "../../components/common/LoadingIndicator";
+import OrganizerHome from "../../components/organizer/home/OrganizerHome";
+import VenueBrowser from "../../components/organizer/venues/VenueBrowser";
+import VenueDetails from "../../components/organizer/venues/VenueDetails";
+import EventForm from "../../components/organizer/events/EventForm";
+import EventsView from "../../components/organizer/events/EventsView";
+import BookingForm from "../../components/organizer/bookings/BookingForm";
+import BookingsView from "../../components/organizer/bookings/BookingsView";
+import BookingDetails from "../../components/organizer/bookings/BookingDetails";
+import NotificationsView from "../../components/organizer/notifications/NotificationsView";
+import OrganizerSidebar from "../../components/organizer/navigation/OrganizerSidebar";
+import OrganizerTopNav from "../../components/organizer/navigation/OrganizerTopNav";
+import useOrganizerDashboard from "../../hooks/useOrganizerDashboard";
 
-import Home from "../../components/organizer/Home/OrganiserHomeScreen";
-import VenueBrowser from "../../components/organizer/BrowseVenues/VenueBrowser";
-import VenueDetails from "../../components/organizer/BrowseVenues/VenueDetails";
-import EventForm from "../../components/organizer/EventForm/EventForm";
-import EventsView from "../../components/organizer/EventForm/EventsView";
-import BookingForm from "../../components/organizer/BookingsDetails/BookingForm";
-import BookingsView from "../../components/organizer/BookingsDetails/BookingsView";
-import BookingDetails from "../../components/organizer/BookingsDetails/BookingDetails";
-import NotificationsView from "../../components/organizer/NotificationsView/NotificationsView";
-
-import {
-    statusName,
-    bookingStart,
-    isFutureBooking,
-    localInput,
-    errorText,
-    overlaps
-} from "../../utils/dashboardUtils";
-
-import OrganizerSidebar from "../../components/organizer/NavBars/sideBar";
-import OrganizerTopNav from "../../components/organizer/NavBars/topBar";
-
-const images = [
-    conferenceCentre,
-    theatreImage,
-    diningImage
-];
-
-
-const blankEvent = {
-    eventName: "",
-    eventDescription: "",
-    eventType: "",
-    eventAttendance: "",
-    startDateTime: "",
-    endDateTime: "",
-    venueId: ""
-};
-
-
-const blankBooking = {
-    eventId: "",
-    venueId: "",
-    startDateTime: "",
-    endDateTime: "",
-    specialRequirements: ""
-};
-
+const images = [conferenceCentre, theatreImage, diningImage];
 
 function OrganizerDashboard() {
-    const [view, setView] = useState("dashboard");
-    const [drawerOpen, setDrawerOpen] = useState(false);
-
-    const [venues, setVenues] = useState([]);
-    const [events, setEvents] = useState([]);
-    const [bookings, setBookings] = useState([]);
-    const [notifications, setNotifications] = useState([]);
-
-    const [activeVenue, setActiveVenue] = useState(null);
-    const [activeBooking, setActiveBooking] = useState(null);
-
-    const [returnView, setReturnView] = useState("events");
-
-    const [editingEvent, setEditingEvent] = useState(null);
-    const [editingBooking, setEditingBooking] = useState(null);
-
-    const [eventForm, setEventForm] = useState(blankEvent);
-    const [bookingForm, setBookingForm] = useState(blankBooking);
-
-    const [query, setQuery] = useState("");
-
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-
-
-    const firstName =
-        localStorage.getItem("firstName") ||
-        "Event organiser";
-
-    const fullName =
-        [
-            localStorage.getItem("firstName"),
-            localStorage.getItem("lastName")
-        ]
-            .filter(Boolean)
-            .join(" ") || firstName;
-
-
-    const loadData = useCallback(async () => {
-        setLoading(true);
-
-        try {
-            const [
-                venueResponse,
-                eventResponse,
-                bookingResponse,
-                notificationResponse
-            ] = await Promise.all([
-                api.get("/Venues"),
-                api.get("/Events"),
-                api.get("/Bookings"),
-                api.get("/Notifications")
-            ]);
-
-
-            const venueList = venueResponse.data || [];
-
-
-            /*
-             * Load the features belonging to each venue.
-             * The backend exposes these through:
-             * GET /Venues/{venueId}/features
-             */
-            const featureResponses = await Promise.all(
-                venueList.map((venue) =>
-                    api
-                        .get(`/Venues/${venue.venueId}/features`)
-                        .catch(() => ({ data: [] }))
-                )
-            );
-
-
-            const venuesWithFeatures = venueList.map(
-                (venue, index) => ({
-                    ...venue,
-                    features:
-                        featureResponses[index].data || []
-                })
-            );
-
-
-            setVenues(venuesWithFeatures);
-            setEvents(eventResponse.data || []);
-            setBookings(bookingResponse.data || []);
-            setNotifications(notificationResponse.data || []);
-
-        } catch (error) {
-            toast.error(
-                errorText(
-                    error,
-                    "We couldn't load your workspace. Please try again."
-                )
-            );
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
-
-
-    const goTo = (nextView) => {
-        setView(nextView);
-        setDrawerOpen(false);
-        setActiveVenue(null);
-        setActiveBooking(null);
-    };
-
-
-    const openVenue = (venue) => {
-        setActiveVenue(venue);
-        setView("venue-detail");
-        setDrawerOpen(false);
-    };
-
-
-    const openBooking = (booking) => {
-        setActiveBooking(booking);
-        setView("booking-detail");
-        setDrawerOpen(false);
-    };
-
-
-    const availableVenues = venues.filter(
-        (venue) =>
-            venue.venueStatus?.toLowerCase() === "available"
-    );
-
-
-    const upcoming = bookings
-        .filter(
-            (booking) =>
-                ![
-                    "cancelled",
-                    "rejected",
-                    "completed"
-                ].includes(
-                    statusName(
-                        booking.statusName
-                    ).toLowerCase()
-                ) &&
-                isFutureBooking(booking, events)
-        )
-        .sort(
-            (a, b) =>
-                new Date(
-                    bookingStart(a, events)
-                ) -
-                new Date(
-                    bookingStart(b, events)
-                )
-        );
-
-
-    const unread = notifications.filter(
-        (notification) =>
-            !notification.isRead
-    ).length;
-
-
-    const startEvent = (
-        venue,
-        event = null
-    ) => {
-        setActiveVenue(venue || null);
-
-        setReturnView(
-            venue
-                ? "venue-detail"
-                : "events"
-        );
-
-        setEditingEvent(event);
-
-
-        setEventForm(
-            event
-                ? {
-                      ...event,
-                      startDateTime:
-                          localInput(
-                              event.startDateTime
-                          ),
-                      endDateTime:
-                          localInput(
-                              event.endDateTime
-                          )
-                  }
-                : {
-                      ...blankEvent,
-                      venueId:
-                          venue?.venueId || ""
-                  }
-        );
-
-
-        setView("event-form");
-        setDrawerOpen(false);
-    };
-
-
-    const returnFromForm = () => {
-        setView(returnView);
-        setDrawerOpen(false);
-        setActiveBooking(null);
-
-        if (
-            returnView !==
-            "venue-detail"
-        ) {
-            setActiveVenue(null);
-        }
-    };
-
-
-    const startBooking = (
-        event = null,
-        venue = activeVenue
-    ) => {
-        const source =
-            event ||
-            events.find(
-                (item) =>
-                    item.eventId ===
-                    bookingForm.eventId
-            );
-
-
-        setEditingBooking(null);
-
-
-        setBookingForm({
-            ...blankBooking,
-            eventId:
-                source?.eventId || "",
-            venueId:
-                venue?.venueId ||
-                source?.venueId ||
-                "",
-            startDateTime:
-                localInput(
-                    source?.startDateTime
-                ),
-            endDateTime:
-                localInput(
-                    source?.endDateTime
-                )
-        });
-
-
-        setView("booking-form");
-        setDrawerOpen(false);
-    };
-
-
-    const saveEvent = async (event) => {
-        event.preventDefault();
-        setSaving(true);
-
-
-        const payload = {
-            ...eventForm,
-            startDateTime:
-                new Date(
-                    eventForm.startDateTime
-                ).toISOString(),
-            endDateTime:
-                new Date(
-                    eventForm.endDateTime
-                ).toISOString()
-        };
-
-
-        try {
-            const response = editingEvent
-                ? await api.put(
-                      `/Events/${editingEvent.eventId}`,
-                      payload
-                  )
-                : await api.post(
-                      "/Events",
-                      payload
-                  );
-
-
-            setEvents((current) =>
-                editingEvent
-                    ? current.map(
-                          (item) =>
-                              item.eventId ===
-                              response.data.eventId
-                                  ? response.data
-                                  : item
-                      )
-                    : [
-                          ...current,
-                          response.data
-                      ]
-            );
-
-
-            toast.success(
-                editingEvent
-                    ? "Event updated successfully."
-                    : "Event created successfully."
-            );
-
-
-            if (editingEvent) {
-                goTo("events");
-            } else {
-                startBooking(
-                    response.data,
-                    venues.find(
-                        (venue) =>
-                            venue.venueId ===
-                            response.data.venueId
-                    )
-                );
-            }
-
-        } catch (error) {
-            toast.error(
-                errorText(
-                    error,
-                    "Unable to save the event. Check the details and try again."
-                )
-            );
-        } finally {
-            setSaving(false);
-        }
-    };
-
-
-    const submitEventAndBooking = async (
-        event
-    ) => {
-        event.preventDefault();
-
-
-        if (!eventForm.venueId) {
-            toast.error(
-                "Choose a venue before submitting."
-            );
-            return;
-        }
-
-
-        if (
-            new Date(
-                eventForm.endDateTime
-            ) <=
-            new Date(
-                eventForm.startDateTime
-            )
-        ) {
-            toast.error(
-                "End time must be after the start time."
-            );
-            return;
-        }
-
-
-        setSaving(true);
-
-
-        try {
-            toast.info(
-                "Checking venue availability..."
-            );
-
-
-            const availability =
-                await api.get(
-                    "/Bookings/availability",
-                    {
-                        params: {
-                            venueId:
-                                eventForm.venueId,
-                            startDateTime:
-                                new Date(
-                                    eventForm.startDateTime
-                                ).toISOString(),
-                            endDateTime:
-                                new Date(
-                                    eventForm.endDateTime
-                                ).toISOString()
-                        }
-                    }
-                );
-
-
-            if (
-                !availability.data.available
-            ) {
-                toast.error(
-                    availability.data.reason ||
-                        "This venue is unavailable for the selected period."
-                );
-                return;
-            }
-
-
-            const response =
-                await api.post(
-                    "/Events/with-booking",
-                    {
-                        ...eventForm,
-                        startDateTime:
-                            new Date(
-                                eventForm.startDateTime
-                            ).toISOString(),
-                        endDateTime:
-                            new Date(
-                                eventForm.endDateTime
-                            ).toISOString()
-                    }
-                );
-
-
-            setEvents((current) => [
-                ...current,
-                response.data.event
-            ]);
-
-
-            setBookings((current) => [
-                ...current,
-                response.data.booking
-            ]);
-
-
-            setActiveBooking(
-                response.data.booking
-            );
-
-            setActiveVenue(null);
-            setView("booking-detail");
-
-
-            toast.success(
-                "Your event and venue booking have been submitted successfully. It is pending staff approval."
-            );
-
-        } catch (error) {
-            toast.error(
-                error.response?.status ===
-                    409
-                    ? "This venue is no longer available for the selected date and time. Please choose another time or venue."
-                    : errorText(
-                          error,
-                          "Unable to submit the event and booking."
-                      )
-            );
-        } finally {
-            setSaving(false);
-        }
-    };
-
-
-    const saveBooking = async (event) => {
-        event.preventDefault();
-
-
-        const candidate = {
-            ...bookingForm,
-            startDateTime:
-                new Date(
-                    bookingForm.startDateTime
-                ).toISOString(),
-            endDateTime:
-                new Date(
-                    bookingForm.endDateTime
-                ).toISOString()
-        };
-
-
-        if (
-            new Date(
-                candidate.endDateTime
-            ) <=
-            new Date(
-                candidate.startDateTime
-            )
-        ) {
-            toast.error(
-                "End time must be after the start time."
-            );
-            return;
-        }
-
-
-        if (
-            bookings.some(
-                (booking) =>
-                    overlaps(
-                        booking,
-                        candidate,
-                        editingBooking?.bookingId
-                    )
-            )
-        ) {
-            toast.error(
-                "This venue is already booked for the selected date and time. Please choose another time or venue."
-            );
-            return;
-        }
-
-
-        setSaving(true);
-
-
-        try {
-            const response =
-                editingBooking
-                    ? await api.put(
-                          `/Bookings/${editingBooking.bookingId}`,
-                          candidate
-                      )
-                    : await api.post(
-                          "/Bookings",
-                          candidate
-                      );
-
-
-            setBookings((current) =>
-                editingBooking
-                    ? current.map(
-                          (booking) =>
-                              booking.bookingId ===
-                              response.data.bookingId
-                                  ? {
-                                        ...booking,
-                                        ...response.data,
-                                        ...candidate
-                                    }
-                                  : booking
-                      )
-                    : [
-                          ...current,
-                          response.data
-                      ]
-            );
-
-
-            toast.success(
-                editingBooking
-                    ? "Booking updated successfully."
-                    : "Booking submitted successfully. It is waiting for staff approval."
-            );
-
-
-            goTo("bookings");
-
-        } catch (error) {
-            toast.error(
-                error.response?.status ===
-                    409
-                    ? "This venue has just been booked by another user. Please choose another venue or time."
-                    : errorText(
-                          error,
-                          "Unable to submit the booking. Please check the details and try again."
-                      )
-            );
-        } finally {
-            setSaving(false);
-        }
-    };
-
-
-    const cancelBooking = async (
-        booking
-    ) => {
-        if (
-            !window.confirm(
-                "Cancel this booking? This action cannot be undone."
-            )
-        ) {
-            return;
-        }
-
-
-        setSaving(true);
-
-
-        try {
-            await api.put(
-                `/Bookings/${booking.bookingId}/cancel`
-            );
-
-
-            setBookings((current) =>
-                current.map(
-                    (item) =>
-                        item.bookingId ===
-                        booking.bookingId
-                            ? {
-                                  ...item,
-                                  statusName:
-                                      "Cancelled"
-                              }
-                            : item
-                )
-            );
-
-
-            toast.success(
-                "Booking cancelled successfully."
-            );
-
-        } catch (error) {
-            toast.error(
-                errorText(
-                    error,
-                    "Could not cancel this booking."
-                )
-            );
-        } finally {
-            setSaving(false);
-        }
-    };
-
-
-    const editBooking = (
-        booking
-    ) => {
-        setEditingBooking(booking);
-
-
-        setActiveVenue(
-            venues.find(
-                (venue) =>
-                    venue.venueId ===
-                    booking.venueId
-            ) || null
-        );
-
-
-        setReturnView(
-            "booking-detail"
-        );
-
-
-        setBookingForm({
-            eventId:
-                booking.eventId,
-            venueId:
-                booking.venueId,
-            startDateTime:
-                localInput(
-                    booking.startDateTime
-                ),
-            endDateTime:
-                localInput(
-                    booking.endDateTime
-                ),
-            specialRequirements:
-                booking.specialRequirements ||
-                ""
-        });
-
-
-        setView("booking-form");
-    };
-
-
-    const markRead = async (
-        notification
-    ) => {
-        if (notification.isRead) {
-            return;
-        }
-
-
-        try {
-            await api.put(
-                `/Notifications/${notification.notificationId}/read`
-            );
-
-
-            setNotifications(
-                (current) =>
-                    current.map(
-                        (item) =>
-                            item.notificationId ===
-                            notification.notificationId
-                                ? {
-                                      ...item,
-                                      isRead: true
-                                  }
-                                : item
-                    )
-            );
-
-        } catch (error) {
-            toast.error(
-                errorText(
-                    error,
-                    "Could not update notification."
-                )
-            );
-        }
-    };
-
-
-    const payForBooking = async (
-        notification
-    ) => {
-        if (!notification?.bookingId) {
-            toast.error(
-                "There is no approved booking linked to this notification."
-            );
-            return;
-        }
-
-
-        try {
-            const response =
-                await api.post(
-                    "/Payments",
-                    {
-                        bookingId:
-                            notification.bookingId
-                    }
-                );
-
-
-            const checkoutUrl =
-                response.data?.checkoutUrl;
-
-
-            if (!checkoutUrl) {
-                toast.error(
-                    "Payment is not available for this booking yet."
-                );
-                return;
-            }
-
-
-            await markRead(
-                notification
-            );
-
-
-            window.open(
-                checkoutUrl,
-                "_blank",
-                "noopener,noreferrer"
-            );
-
-
-            toast.success(
-                "Payment opened successfully."
-            );
-
-        } catch (error) {
-            const message =
-                error.response?.data
-                    ?.message ||
-                error.response?.data ||
-                "Unable to start the payment flow.";
-
-
-            toast.error(message);
-        }
-    };
-
+    const {
+        view,
+        drawerOpen,
+        setDrawerOpen,
+        bookings,
+        upcoming,
+        firstName,
+        fullName,
+        unread,
+        loading,
+        title,
+        goTo,
+        openBooking,
+        openVenue,
+        startEvent,
+        startBooking,
+        returnFromForm,
+        saveEvent,
+        submitEventAndBooking,
+        saveBooking,
+        cancelBooking,
+        editBooking,
+        markRead,
+        payForBooking,
+        venues,
+        events,
+        notifications,
+        query,
+        setQuery,
+        activeVenue,
+        activeBooking,
+        availableVenues,
+        eventForm,
+        setEventForm,
+        bookingForm,
+        setBookingForm,
+        editingEvent,
+        editingBooking,
+        saving,
+        setActiveVenue
+    } = useOrganizerDashboard();
 
     if (loading) {
         return (
             <div className="organizer-loading">
-                <Loading label="Preparing your workspace" />
+                <LoadingIndicator label="Preparing your workspace" />
             </div>
         );
     }
 
+        return (
+            <div className="organizer-app">
 
-    const title = {
-        dashboard: "Dashboard",
-        venues: "Find a Venue",
-        bookings: "My Bookings",
-        events: "My Events",
-        notifications: "Notifications",
-        "venue-detail": "Venue Details",
-        "booking-detail": "Booking Details",
-        "event-form": editingEvent
-            ? "Edit Event"
-            : "Create Booking",
-        "booking-form": editingBooking
-            ? "Edit Booking"
-            : "Create Booking"
-    }[view];
-
-
-    return (
-        <div className="organizer-app">
-
-        <OrganizerSidebar
-            view={view}
-            unread={unread}
-            drawerOpen={drawerOpen}
-            setDrawerOpen={setDrawerOpen}
-            goTo={goTo}
-        />
-
-        <main className="organizer-main compact-main">
-
-            <OrganizerTopNav
-                title={title}
-                firstName={firstName}
-                fullName={fullName}
+            <OrganizerSidebar
+                view={view}
                 unread={unread}
+                drawerOpen={drawerOpen}
                 setDrawerOpen={setDrawerOpen}
                 goTo={goTo}
             />
 
-            {view === "dashboard" && (
-                <Home
+            <main className="organizer-main compact-main">
+
+                <OrganizerTopNav
+                    title={title}
                     firstName={firstName}
-                    bookings={bookings}
-                    upcoming={upcoming}
-                    onFind={() =>
-                        goTo("venues")
-                    }
-                    onBooking={openBooking}
+                    fullName={fullName}
+                    unread={unread}
+                    setDrawerOpen={setDrawerOpen}
+                    goTo={goTo}
                 />
-            )}
 
-            {view === "venues" && (
-                <VenueBrowser
-                    venues={venues}
-                    query={query}
-                    setQuery={setQuery}
-                    onOpen={openVenue}
-                />
-            )}
+{view === "dashboard" && (
+    <OrganizerHome
+        firstName={firstName}
+        venues={venues}
+        query={query}
+        setQuery={setQuery}
+        onOpenVenue={openVenue}
+        onFindVenue={() => goTo("venues")}
+    />
+)}
 
-            {view === "venue-detail" &&
-                activeVenue && (
-                    <VenueDetails
-                        venue={activeVenue}
-                        image={
-                            images[
-                                venues.findIndex(
-                                    (venue) =>
-                                        venue.venueId ===
-                                        activeVenue.venueId
-                                ) %
-                                    images.length
-                            ]
-                        }
-                        onBack={() =>
-                            goTo("venues")
-                        }
-                        onBook={() =>
-                            startEvent(activeVenue)
-                        }
+                {view === "venues" && (
+                    <VenueBrowser
+                        venues={venues}
+                        query={query}
+                        setQuery={setQuery}
+                        onOpen={openVenue}
                     />
                 )}
 
-            {view === "event-form" && (
-                <EventForm
-                    form={eventForm}
-                    setForm={setEventForm}
-                    selectedVenue={activeVenue}
-                    venues={availableVenues}
-                    saving={saving}
-                    editing={editingEvent}
-                    onSubmit={
-                        editingEvent
-                            ? saveEvent
-                            : submitEventAndBooking
-                    }
-                    onChangeVenue={(venue) => {
-                        setActiveVenue(venue);
+                {view === "venue-detail" &&
+                    activeVenue && (
+                        <VenueDetails
+                            venue={activeVenue}
+                            image={
+                                images[
+                                    venues.findIndex(
+                                        (venue) =>
+                                            venue.venueId ===
+                                            activeVenue.venueId
+                                    ) %
+                                        images.length
+                                ]
+                            }
+                            onBack={() =>
+                                goTo("venues")
+                            }
+                            onBook={() =>
+                                startEvent(activeVenue)
+                            }
+                        />
+                    )}
 
-                        if (!venue) {
-                            setEventForm(
-                                (current) => ({
-                                    ...current,
-                                    venueId: ""
-                                })
-                            );
+                {view === "event-form" && (
+                    <EventForm
+                        form={eventForm}
+                        setForm={setEventForm}
+                        selectedVenue={activeVenue}
+                        venues={availableVenues}
+                        saving={saving}
+                        editing={editingEvent}
+                        onSubmit={
+                            editingEvent
+                                ? saveEvent
+                                : submitEventAndBooking
                         }
-                    }}
-                    onCancel={returnFromForm}
-                />
-            )}
+                        onChangeVenue={(venue) => {
+                            setActiveVenue(venue);
 
-            {view === "booking-form" && (
-                <BookingForm
-                    form={bookingForm}
-                    setForm={setBookingForm}
-                    selectedVenue={activeVenue}
-                    events={events}
-                    venues={availableVenues}
-                    saving={saving}
-                    editing={editingBooking}
-                    onSubmit={saveBooking}
-                    onCancel={returnFromForm}
-                />
-            )}
+                            if (!venue) {
+                                setEventForm(
+                                    (current) => ({
+                                        ...current,
+                                        venueId: ""
+                                    })
+                                );
+                            }
+                        }}
+                        onCancel={returnFromForm}
+                    />
+                )}
 
-            {view === "bookings" && (
-                <BookingsView
-                    bookings={bookings}
-                    onOpen={openBooking}
-                    onEdit={editBooking}
-                    onCancel={cancelBooking}
-                    saving={saving}
-                />
-            )}
+                {view === "booking-form" && (
+                    <BookingForm
+                        form={bookingForm}
+                        setForm={setBookingForm}
+                        selectedVenue={activeVenue}
+                        events={events}
+                        venues={availableVenues}
+                        saving={saving}
+                        editing={editingBooking}
+                        onSubmit={saveBooking}
+                        onCancel={returnFromForm}
+                    />
+                )}
 
-            {view === "booking-detail" &&
-                activeBooking && (
-                    <BookingDetails
-                        booking={activeBooking}
-                        onBack={() =>
-                            goTo("bookings")
-                        }
+                {view === "bookings" && (
+                    <BookingsView
+                        bookings={bookings}
+                        onOpen={openBooking}
                         onEdit={editBooking}
                         onCancel={cancelBooking}
                         saving={saving}
                     />
                 )}
 
-            {view === "events" && (
-                <EventsView
-                    events={events}
-                    bookings={bookings}
-                    venues={venues}
-                    onEdit={startEvent}
-                    onBook={(event) =>
-                        startBooking(
-                            event,
-                            venues.find(
-                                (venue) =>
-                                    venue.venueId ===
-                                    event.venueId
+                {view === "booking-detail" &&
+                    activeBooking && (
+                        <BookingDetails
+                            booking={activeBooking}
+                            onBack={() =>
+                                goTo("bookings")
+                            }
+                            onEdit={editBooking}
+                            onCancel={cancelBooking}
+                            saving={saving}
+                        />
+                    )}
+
+                {view === "events" && (
+                    <EventsView
+                        events={events}
+                        bookings={bookings}
+                        venues={venues}
+                        onEdit={startEvent}
+                        onBook={(event) =>
+                            startBooking(
+                                event,
+                                venues.find(
+                                    (venue) =>
+                                        venue.venueId ===
+                                        event.venueId
+                                )
                             )
-                        )
-                    }
-                />
-            )}
-
-            {view === "notifications" && (
-                <NotificationsView
-                    notifications={notifications}
-                    onRead={markRead}
-                    onOpenBooking={(id) => {
-                        const booking =
-                            bookings.find(
-                                (item) =>
-                                    item.bookingId ===
-                                    id
-                            );
-
-                        if (booking) {
-                            openBooking(booking);
                         }
-                    }}
-                    onPay={payForBooking}
-                />
-            )}
+                    />
+                )}
 
-        </main>
-    </div>
-    );
+                {view === "notifications" && (
+                    <NotificationsView
+                        notifications={notifications}
+                        onRead={markRead}
+                        onOpenBooking={(id) => {
+                            const booking =
+                                bookings.find(
+                                    (item) =>
+                                        item.bookingId ===
+                                        id
+                                );
+
+                            if (booking) {
+                                openBooking(booking);
+                            }
+                        }}
+                        onPay={payForBooking}
+                    />
+                )}
+
+            </main>
+        </div>
+        );
 }
-
 
 export default OrganizerDashboard;

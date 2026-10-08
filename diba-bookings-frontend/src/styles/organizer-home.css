@@ -1,0 +1,456 @@
+/* =========================================================
+   DIBA ORGANISER HOME
+   Editorial style — follows the public landing page
+   ========================================================= */
+
+.organizer-home {
+    --home-navy: #071b2c;
+    --home-blue: #1a4b6b;
+    --home-light: #2c7a9e;
+    --home-yellow: #f2c84b;
+    --home-paper: #f7f8f5;
+    --home-muted: #61727d;
+    --home-line: #dce4e5;
+
+    background: var(--home-paper);
+    color: var(--home-navy);
+
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+
+    min-height: 100%;
+}
+
+
+/* =========================================================
+   WORKSPACE INTRODUCTION
+   ========================================================= */
+
+.home-introduction {
+    border-bottom: 1px solid var(--home-line);
+    padding: 18px 0 48px;
+}
+
+.home-section-label {
+    color: var(--home-light);
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    margin-bottom: 25px;
+    text-transform: uppercase;
+}
+
+.home-introduction-content {
+    align-items: flex-end;
+    display: flex;
+    gap: 40px;
+    justify-content: space-between;
+}
+
+.home-introduction h1 {
+    color: var(--home-navy);
+    font-size: clamp(2.4rem, 5vw, 4.4rem);
+    font-weight: 400;
+    letter-spacing: -0.055em;
+    line-height: 0.98;
+    margin: 0;
+}
+
+.home-introduction h1 em {
+    color: var(--home-blue);
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+}
+
+.home-introduction p {
+    color: var(--home-muted);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin: 18px 0 0;
+}
+
+.home-introduction-note {
+    align-items: center;
+    color: var(--home-muted);
+    display: flex;
+    font-size: 0.7rem;
+    gap: 11px;
+    max-width: 230px;
+}
+
+.home-note-line {
+    background: var(--home-yellow);
+    flex: 0 0 auto;
+    height: 1px;
+    width: 40px;
+}
+
+
+/* =========================================================
+   DISCOVERY
+   ========================================================= */
+
+.home-discovery {
+    border-bottom: 1px solid var(--home-line);
+    padding: 58px 0 50px;
+}
+
+.home-discovery-heading {
+    align-items: flex-end;
+    display: flex;
+    gap: 50px;
+    justify-content: space-between;
+    margin-bottom: 34px;
+}
+
+.home-discovery-heading h2,
+.home-section-heading h2 {
+    color: var(--home-navy);
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 400;
+    letter-spacing: -0.045em;
+    line-height: 1;
+    margin: 0;
+}
+
+.home-discovery-heading h2 em,
+.home-section-heading h2 em {
+    color: var(--home-blue);
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+}
+
+.home-discovery-heading > p,
+.home-section-heading > p {
+    color: var(--home-muted);
+    font-size: 0.82rem;
+    line-height: 1.7;
+    margin: 0 0 4px;
+    max-width: 280px;
+}
+
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+
+.home-discovery-form {
+    align-items: stretch;
+    background: #fff;
+    border: 1px solid var(--home-line);
+    display: flex;
+    min-height: 72px;
+}
+
+.home-search-field {
+    align-items: center;
+    display: flex;
+    flex: 1;
+    gap: 17px;
+    min-width: 0;
+    padding: 13px 20px;
+}
+
+.home-search-icon {
+    color: var(--home-light);
+    flex: 0 0 auto;
+    font-size: 1.5rem;
+}
+
+.home-search-field > div {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.home-search-field small {
+    color: var(--home-light);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.home-search-field input {
+    background: transparent;
+    border: 0;
+    color: var(--home-navy);
+    font-family: inherit;
+    font-size: 0.82rem;
+    min-width: 0;
+    outline: none;
+    padding: 0;
+    width: 100%;
+}
+
+.home-search-field input::placeholder {
+    color: #7b8990;
+}
+
+.home-search-field:focus-within {
+    background: #fbfcfa;
+}
+
+.home-search-clear {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--home-muted);
+    cursor: pointer;
+    display: flex;
+    font-size: 1.1rem;
+    height: 28px;
+    justify-content: center;
+    width: 28px;
+}
+
+.home-search-clear:hover {
+    color: var(--home-navy);
+}
+
+
+/* Advanced search deliberately follows landing-page
+   text-link styling rather than looking like a button. */
+
+.home-advanced-link {
+    align-items: center;
+    background: var(--home-blue);
+    border: 0;
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    gap: 10px;
+    justify-content: center;
+    min-width: 150px;
+    padding: 0 22px;
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.home-advanced-link span {
+    color: var(--home-yellow);
+    font-size: 1rem;
+}
+
+.home-advanced-link:hover {
+    background: var(--home-navy);
+}
+
+
+/* =========================================================
+   VENUE COLLECTION
+   ========================================================= */
+
+.home-venue-section {
+    padding: 70px 0 30px;
+}
+
+.home-section-heading {
+    align-items: flex-end;
+    display: flex;
+    gap: 50px;
+    justify-content: space-between;
+    margin-bottom: 38px;
+}
+
+
+/* =========================================================
+   VENUE GRID
+   ========================================================= */
+
+.home-venue-grid {
+    display: grid;
+    gap: 22px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+
+/*
+   We intentionally reuse VenueCard.
+   The Home styling changes its presentation without
+   changing the component's functionality.
+*/
+
+.home-venue-grid .browse-venue-card {
+    background: #fff;
+    border: 0;
+    border-top: 3px solid var(--home-blue);
+    border-radius: 0;
+    box-shadow: 0 7px 22px rgba(7, 27, 44, 0.07);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition:
+        box-shadow 0.25s ease,
+        transform 0.25s ease;
+}
+
+.home-venue-grid .browse-venue-card:hover {
+    box-shadow: 0 12px 30px rgba(7, 27, 44, 0.11);
+    transform: translateY(-3px);
+}
+
+.home-venue-grid .browse-venue-card > img {
+    display: block;
+    height: 205px;
+    object-fit: cover;
+    width: 100%;
+}
+
+.home-venue-grid .browse-venue-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 13px;
+    padding: 21px 21px 22px;
+}
+
+.home-venue-grid .venue-card-title {
+    align-items: flex-start;
+}
+
+.home-venue-grid .venue-card-title h3 {
+    color: var(--home-navy);
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.home-venue-grid .venue-facts {
+    border-top: 1px solid var(--home-line);
+    color: var(--home-muted);
+    font-size: 0.72rem;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 12px;
+}
+
+.home-venue-grid .outline-action {
+    background: transparent;
+    border: 0;
+    color: var(--home-blue);
+    font-size: 0.72rem;
+    font-weight: 700;
+    justify-content: flex-start;
+    padding: 5px 0 0;
+    width: fit-content;
+}
+
+.home-venue-grid .outline-action span {
+    color: var(--home-light);
+    margin-left: 6px;
+}
+
+.home-venue-grid .outline-action:hover {
+    background: transparent;
+    border: 0;
+    color: var(--home-navy);
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.home-empty {
+    grid-column: 1 / -1;
+}
+
+.home-empty .empty-state {
+    background: #fff;
+    border: 1px solid var(--home-line);
+    border-radius: 0;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1000px) {
+
+    .home-venue-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .home-discovery-heading,
+    .home-section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .home-discovery-heading > p,
+    .home-section-heading > p {
+        margin: 0;
+        max-width: 400px;
+    }
+}
+
+
+@media (max-width: 700px) {
+
+    .home-introduction-content {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .home-introduction-note {
+        margin-top: 5px;
+    }
+
+    .home-discovery-form {
+        flex-direction: column;
+    }
+
+    .home-search-field {
+        min-height: 70px;
+    }
+
+    .home-advanced-link {
+        min-height: 52px;
+        width: 100%;
+    }
+
+    .home-venue-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+@media (max-width: 500px) {
+
+    .home-introduction {
+        padding-bottom: 38px;
+    }
+
+    .home-discovery {
+        padding-bottom: 38px;
+        padding-top: 45px;
+    }
+
+    .home-venue-section {
+        padding-top: 50px;
+    }
+
+    .home-introduction h1 {
+        font-size: 2.45rem;
+    }
+
+    .home-discovery-heading h2,
+    .home-section-heading h2 {
+        font-size: 2rem;
+    }
+
+    .home-venue-grid .browse-venue-card > img {
+        height: 190px;
+    }
+}
