@@ -3,6 +3,9 @@
   "WorkspaceRootPath": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Program Files\\dotnet\\sdk\\9.0.317\\Sdks\\Microsoft.NET.Sdk.StaticWebAssets\\targets\\Microsoft.NET.Sdk.StaticWebAssets.targets||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|c:\\users\\ntlahla\\source\\repos\\dibabookings\\backend\\diba_backend\\diba_backend\\controllers\\eventscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{196B7C0E-8FF9-4AA9-9866-37AD5D9C87D4}|DIBA_Backend\\DIBA_Backend.csproj|solutionrelative:diba_backend\\controllers\\eventscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -90,7 +93,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 3,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Bookmark",
@@ -98,7 +101,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 0,
+              "Title": "Microsoft.NET.Sdk.StaticWebAssets.targets",
+              "DocumentMoniker": "C:\\Program Files\\dotnet\\sdk\\9.0.317\\Sdks\\Microsoft.NET.Sdk.StaticWebAssets\\targets\\Microsoft.NET.Sdk.StaticWebAssets.targets",
+              "RelativeDocumentMoniker": "..\\..\\..\\..\\..\\..\\..\\Program Files\\dotnet\\sdk\\9.0.317\\Sdks\\Microsoft.NET.Sdk.StaticWebAssets\\targets\\Microsoft.NET.Sdk.StaticWebAssets.targets",
+              "ToolTip": "C:\\Program Files\\dotnet\\sdk\\9.0.317\\Sdks\\Microsoft.NET.Sdk.StaticWebAssets\\targets\\Microsoft.NET.Sdk.StaticWebAssets.targets",
+              "RelativeToolTip": "..\\..\\..\\..\\..\\..\\..\\Program Files\\dotnet\\sdk\\9.0.317\\Sdks\\Microsoft.NET.Sdk.StaticWebAssets\\targets\\Microsoft.NET.Sdk.StaticWebAssets.targets",
+              "ViewState": "AgIAAJQCAAAAAAAAAAAIwKYCAAAEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003801|",
+              "WhenOpened": "2026-10-03T06:00:15.378Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
               "Title": "Event.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Models\\Entities\\Event.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Models\\Entities\\Event.cs",
@@ -111,7 +127,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "CreateEventWithBookingDto.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Dto\\Event\\CreateEventWithBookingDto.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Dto\\Event\\CreateEventWithBookingDto.cs",
@@ -124,7 +140,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "EventsController.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Controllers\\EventsController.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Controllers\\EventsController.cs",
@@ -137,7 +153,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "BookingResponseDto.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Dto\\Booking\\BookingResponseDto.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Dto\\Booking\\BookingResponseDto.cs",
@@ -150,7 +166,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "Booking.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Models\\Entities\\Booking.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Models\\Entities\\Booking.cs",
@@ -163,7 +179,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "BookingsController.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Controllers\\BookingsController.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Controllers\\BookingsController.cs",
@@ -176,7 +192,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\appsettings.json",
               "RelativeDocumentMoniker": "DIBA_Backend\\appsettings.json",
@@ -189,7 +205,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "20261003050442_AddBookingAcknowledgement.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Migrations\\20261003050442_AddBookingAcknowledgement.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Migrations\\20261003050442_AddBookingAcknowledgement.cs",
@@ -202,7 +218,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "CreateBookingDto.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Dto\\Booking\\CreateBookingDto.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Dto\\Booking\\CreateBookingDto.cs",
@@ -215,7 +231,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 11,
               "Title": "CreatePaymentDto.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Dto\\Payment\\CreatePaymentDto.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Dto\\Payment\\CreatePaymentDto.cs",
@@ -228,7 +244,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "PaymentsController.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Controllers\\PaymentsController.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Controllers\\PaymentsController.cs",
@@ -241,7 +257,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 12,
               "Title": "VenuesController.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Controllers\\VenuesController.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Controllers\\VenuesController.cs",
@@ -254,7 +270,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 13,
               "Title": "DIBABookingsDbContext.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Data\\DIBABookingsDbContext.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Data\\DIBABookingsDbContext.cs",
@@ -267,7 +283,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 14,
               "Title": "AdministrationController.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Controllers\\AdministrationController.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Controllers\\AdministrationController.cs",
@@ -279,7 +295,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 15,
               "Title": "UsersController.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Controllers\\UsersController.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Controllers\\UsersController.cs",
@@ -291,7 +307,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 16,
               "Title": "NotificationsController.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Controllers\\NotificationsController.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Controllers\\NotificationsController.cs",
@@ -303,7 +319,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 17,
               "Title": "AuditLogsController.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Controllers\\AuditLogsController.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Controllers\\AuditLogsController.cs",
@@ -315,7 +331,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 18,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Program.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Program.cs",
@@ -327,7 +343,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 19,
               "Title": "AuthenticationController.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Controllers\\AuthenticationController.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Controllers\\AuthenticationController.cs",
@@ -339,7 +355,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 20,
               "Title": "UserHelper.cs",
               "DocumentMoniker": "C:\\Users\\Ntlahla\\source\\repos\\DibaBookings\\Backend\\DIBA_Backend\\DIBA_Backend\\Helpers\\UserHelper.cs",
               "RelativeDocumentMoniker": "DIBA_Backend\\Helpers\\UserHelper.cs",
