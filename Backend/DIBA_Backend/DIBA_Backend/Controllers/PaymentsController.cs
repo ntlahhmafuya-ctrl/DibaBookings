@@ -485,6 +485,15 @@ namespace DIBA_Backend.Controllers
                 return Unauthorized("Invalid Yoco webhook signature.");
             }
 
+            // A verified delivery ID already in the database is a safe no-op.
+            if (!string.IsNullOrWhiteSpace(webhookId) &&
+                await dbContext.ProcessedYocoWebhooks
+                    .AsNoTracking()
+                    .AnyAsync(e => e.WebhookId == webhookId))
+            {
+                return Ok(new { received = true, duplicate = true });
+            }
+
             try
             {
                 using var document = JsonDocument.Parse(rawBody);
@@ -616,12 +625,36 @@ namespace DIBA_Backend.Controllers
                     }
                 }
 
+
+                // The event ID is the idempotency key. The unique database
+                // key prevents two concurrent deliveries from both applying.
+                dbContext.ProcessedYocoWebhooks.Add(new ProcessedYocoWebhook
+                {
+                    WebhookId = webhookId,
+                    EventType = eventType!,
+                    ProcessedAtUtc = DateTime.UtcNow
+                });
+
                 await dbContext.SaveChangesAsync();
                 return Ok(new { received = true });
             }
             catch (JsonException)
             {
                 return BadRequest("Yoco webhook body is not valid JSON.");
+            }
+            catch (DbUpdateException)
+            {
+                // A concurrent delivery may have inserted the same ID first.
+                // Only treat it as a duplicate when that ID now exists.
+                if (!string.IsNullOrWhiteSpace(webhookId) &&
+                    await dbContext.ProcessedYocoWebhooks
+                        .AsNoTracking()
+                        .AnyAsync(e => e.WebhookId == webhookId))
+                {
+                    return Ok(new { received = true, duplicate = true });
+                }
+
+                return StatusCode(500, "Webhook could not be saved. Yoco may retry delivery.");
             }
         }
 
