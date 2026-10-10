@@ -246,34 +246,6 @@ function EventForm({
                     />
                 </Field>
 
-{!editing && (
-    <div className="booking-acknowledgement">
-        <label className="acknowledgement-label">
-            <input
-                type="checkbox"
-                required
-                checked={form.acknowledgementAccepted || false}
-                onChange={(event) =>
-                    setForm({
-                        ...form,
-                        acknowledgementAccepted:
-                            event.target.checked
-                    })
-                }
-            />
-
-            <span>
-                I confirm that the information provided in this
-                booking is complete and accurate. I understand that
-                I am responsible for checking the event, venue,
-                equipment, and facility requirements for my booking.
-                I understand that DIBA Bookings provides the booking
-                platform and cannot be responsible for requirements
-                or information that I have not provided or specified.
-            </span>
-        </label>
-    </div>
-)}
 
                 {!editing && (
                     <>
