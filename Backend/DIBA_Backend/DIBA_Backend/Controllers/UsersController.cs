@@ -1,4 +1,5 @@
-﻿using DIBA_Backend.Data;
+﻿using System.ComponentModel.DataAnnotations;
+using DIBA_Backend.Data;
 using DIBA_Backend.Dto.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -286,36 +287,46 @@ namespace DIBA_Backend.Controllers
             // only fields supplied by the frontend are changed.
             if (updateUser.FirstName != null)
             {
-                user.FirstName = updateUser.FirstName;
+                var firstName = updateUser.FirstName.Trim();
+                if (string.IsNullOrWhiteSpace(firstName) || firstName.Length > 80)
+                {
+                    return BadRequest("First name must contain 1–80 characters.");
+                }
+
+                user.FirstName = firstName;
             }
 
             if (updateUser.LastName != null)
             {
-                user.LastName = updateUser.LastName;
+                var lastName = updateUser.LastName.Trim();
+                if (string.IsNullOrWhiteSpace(lastName) || lastName.Length > 80)
+                {
+                    return BadRequest("Last name must contain 1–80 characters.");
+                }
+
+                user.LastName = lastName;
             }
 
             if (updateUser.Email != null)
             {
-                // Similar data-integrity logic:
-                // check whether another user already has the requested
-                // email address before changing the current user's email.
-                //
-                // DIBA adaptation: UserId != userGuid excludes the
-                // current user from the duplicate check.
-                var existingUser =
-                    await _dbContext.Users
-                        .FirstOrDefaultAsync(user =>
-                            user.Email ==
-                                updateUser.Email &&
-                            user.UserId != userGuid);
+                var normalizedEmail = updateUser.Email.Trim().ToLowerInvariant();
+                if (normalizedEmail.Length > 320 ||
+                    !new EmailAddressAttribute().IsValid(normalizedEmail))
+                {
+                    return BadRequest("Enter a valid email address.");
+                }
+
+                var existingUser = await _dbContext.Users
+                    .FirstOrDefaultAsync(user =>
+                        user.Email == normalizedEmail &&
+                        user.UserId != userGuid);
 
                 if (existingUser != null)
                 {
-                    return BadRequest(
-                        "A user with this email already exists.");
+                    return Conflict("A user with this email already exists.");
                 }
 
-                user.Email = updateUser.Email;
+                user.Email = normalizedEmail;
             }
 
             await _dbContext.SaveChangesAsync();
