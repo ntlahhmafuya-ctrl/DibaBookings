@@ -22,6 +22,10 @@ import { getBookings } from "../../services/bookingService";
 import { emptyOverview } from "../../utils/dashboardUtils";
 import { clearSession } from "../../utils/sessionUtils";
 
+/**
+ * ADMINISTRATOR DASHBOARD
+ * Responsibility: load system overview, users, bookings, audit history, and privacy requests for authorised administrators.
+ */
 function AdminDashboard() {
     const [overview, setOverview] = useState(emptyOverview);
     const [users, setUsers] = useState([]);
