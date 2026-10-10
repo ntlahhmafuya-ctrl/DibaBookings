@@ -422,6 +422,31 @@ namespace DIBA_Backend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal?>("RefundAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("RefundProcessedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RefundFailureReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RefundReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("RefundRequestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RefundRequestKey")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RefundStatus")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("YocoRefundId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ReferenceNumber")
                         .HasColumnType("nvarchar(max)");
 
