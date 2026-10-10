@@ -192,6 +192,46 @@ namespace DIBA_Backend.Migrations
                     b.ToTable("Events");
                 });
 
+            modelBuilder.Entity("DIBA_Backend.Models.Entities.PrivacyRequest", b =>
+                {
+                    b.Property<Guid>("PrivacyRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RequestType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Response")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("SubmittedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("PrivacyRequestId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PrivacyRequests");
+                });
+
             modelBuilder.Entity("DIBA_Backend.Models.Entities.Notification", b =>
                 {
                     b.Property<Guid>("NotificationId")
@@ -475,6 +515,17 @@ namespace DIBA_Backend.Migrations
                         .IsRequired();
 
                     b.Navigation("Booking");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DIBA_Backend.Models.Entities.PrivacyRequest", b =>
+                {
+                    b.HasOne("DIBA_Backend.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
