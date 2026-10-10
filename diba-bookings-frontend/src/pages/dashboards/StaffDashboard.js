@@ -54,6 +54,7 @@ function errorMessage(error, fallback) {
 function StaffDashboard() {
     const [bookings, setBookings] = useState([]);
     const [venues, setVenues] = useState([]);
+    const [selectedVenueImage, setSelectedVenueImage] = useState(null);
     const [loading, setLoading] = useState(true);
     const [savingVenue, setSavingVenue] = useState(false);
     const [venueModalOpen, setVenueModalOpen] = useState(false);
@@ -381,13 +382,30 @@ function StaffDashboard() {
                                 <p>No venues have been added yet. Select “Add venue” to create the first one.</p>
                             ) : venues.map((venue) => (
                                 <div className="compact-row" key={venue.venueId}>
-                                    {venue.venueImageData && (
-                                        <img
-                                            src={venue.venueImageData}
-                                            alt={venue.venueName}
-                                            style={{ width: "112px", height: "78px", objectFit: "cover", borderRadius: "8px", flexShrink: 0 }}
-                                        />
-                                    )}
+                                    <div style={{ width: "160px", flexShrink: 0 }}>
+                                        {venue.venueImageData ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSelectedVenueImage(venue)}
+                                                title={`View photo of ${venue.venueName}`}
+                                                style={{ display: "block", padding: 0, border: 0, background: "transparent", cursor: "zoom-in" }}
+                                            >
+                                                <img
+                                                    src={venue.venueImageData}
+                                                    alt={`Photo of ${venue.venueName}`}
+                                                    style={{ width: "160px", height: "105px", objectFit: "cover", borderRadius: "8px" }}
+                                                />
+                                                <span className="small text-primary">View full image</span>
+                                            </button>
+                                        ) : (
+                                            <div
+                                                className="d-flex align-items-center justify-content-center bg-light text-muted rounded"
+                                                style={{ width: "160px", height: "105px", fontSize: "0.85rem", textAlign: "center", padding: "8px" }}
+                                            >
+                                                No venue image uploaded
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className="flex-grow-1">
                                         <strong>{venue.venueName}</strong>
                                         <p>{venue.location} / capacity {venue.capacity}</p>
@@ -572,6 +590,26 @@ function StaffDashboard() {
                 <Modal.Footer>
                     <Button variant="secondary" onClick={() => setFacilityModalOpen(false)}>Close</Button>
                 </Modal.Footer>
+            </Modal>
+
+            <Modal
+                show={Boolean(selectedVenueImage)}
+                onHide={() => setSelectedVenueImage(null)}
+                centered
+                size="lg"
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>{selectedVenueImage?.venueName || "Venue image"}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body className="text-center">
+                    {selectedVenueImage?.venueImageData && (
+                        <img
+                            src={selectedVenueImage.venueImageData}
+                            alt={`Full image of ${selectedVenueImage.venueName}`}
+                            style={{ maxWidth: "100%", maxHeight: "70vh", objectFit: "contain", borderRadius: "8px" }}
+                        />
+                    )}
+                </Modal.Body>
             </Modal>
         </DashboardShell>
     );
