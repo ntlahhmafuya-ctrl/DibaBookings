@@ -586,7 +586,7 @@ const submitEventAndBooking = async (event) => {
     ) => {
         if (
             !window.confirm(
-                "Cancel this booking? This action cannot be undone."
+                "Cancel this booking? This action cannot be undone. Organiser cancellations receive a full refund at least 7 days before the event, a 50% refund from 72 hours to less than 7 days before the event, and no refund less than 72 hours before the event. Refunds are subject to payment-provider confirmation."
             )
         ) {
             return;
