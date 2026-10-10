@@ -7,9 +7,11 @@ import LoadingIndicator from "../../components/common/LoadingIndicator";
 import StatCard from "../../components/common/StatCard";
 import {
     approveBooking,
+    cancelBooking,
     getBookings,
     rejectBooking
 } from "../../services/bookingService";
+import { getPayments, retryFailedRefund } from "../../services/paymentService";
 import {
     createVenue,
     createVenueFeature,
@@ -53,8 +55,14 @@ function errorMessage(error, fallback) {
 
 function StaffDashboard() {
     const [bookings, setBookings] = useState([]);
+    const [payments, setPayments] = useState([]);
     const [venues, setVenues] = useState([]);
     const [activeScreen, setActiveScreen] = useState("overview");
+    const [bookingSearch, setBookingSearch] = useState("");
+    const [bookingStatusFilter, setBookingStatusFilter] = useState("All");
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [bookingDetailsOpen, setBookingDetailsOpen] = useState(false);
+    const [retryingPaymentId, setRetryingPaymentId] = useState(null);
     const [selectedVenueImage, setSelectedVenueImage] = useState(null);
     const [loading, setLoading] = useState(true);
     const [savingVenue, setSavingVenue] = useState(false);
@@ -78,6 +86,16 @@ function StaffDashboard() {
             ]);
             setBookings(Array.isArray(bookingResponse.data) ? bookingResponse.data : []);
             setVenues(Array.isArray(venueResponse.data) ? venueResponse.data : []);
+
+            // Payment visibility is important for staff operations, but a temporary
+            // payment endpoint issue should not hide the booking and venue workspace.
+            try {
+                const paymentResponse = await getPayments();
+                setPayments(Array.isArray(paymentResponse.data) ? paymentResponse.data : []);
+            } catch (paymentError) {
+                setPayments([]);
+                toast.error(errorMessage(paymentError, "Could not load payment and refund information."));
+            }
         } catch (error) {
             toast.error(errorMessage(error, "Could not load staff workspace."));
         } finally {
@@ -108,6 +126,57 @@ function StaffDashboard() {
             toast.error(errorMessage(error, "Could not update booking."));
         }
     };
+
+    const openBookingDetails = (booking) => {
+        setSelectedBooking(booking);
+        setBookingDetailsOpen(true);
+    };
+
+    const cancelBookingAsStaff = async (booking) => {
+        const confirmed = window.confirm(
+            `Cancel the booking for "${booking.eventName || "this event"}"? DIBA-initiated cancellations receive a full refund when a successful payment exists. This action cannot be undone.`
+        );
+        if (!confirmed) return;
+
+        try {
+            await cancelBooking(booking.bookingId);
+            toast.success("Booking cancelled. Check the refund status in the booking details.");
+            setBookingDetailsOpen(false);
+            setSelectedBooking(null);
+            await loadData();
+        } catch (error) {
+            toast.error(errorMessage(error, "Could not cancel this booking."));
+        }
+    };
+
+    const retryRefund = async (payment) => {
+        if (!window.confirm(`Retry the failed refund of R${Number(payment.refundAmount || 0).toFixed(2)}? Only retry when Yoco has confirmed that the previous attempt failed.`)) return;
+        setRetryingPaymentId(payment.paymentId);
+        try {
+            await retryFailedRefund(payment.paymentId);
+            toast.success("Refund retry submitted. Refresh the booking details to see its latest status.");
+            await loadData();
+        } catch (error) {
+            toast.error(errorMessage(error, "Could not retry the refund."));
+        } finally {
+            setRetryingPaymentId(null);
+        }
+    };
+
+    const filteredBookings = bookings.filter((booking) => {
+        const query = bookingSearch.trim().toLowerCase();
+        const matchesQuery = !query || [
+            booking.bookingId, booking.eventName, booking.organiserName,
+            booking.venueName, booking.statusName, booking.specialRequirements
+        ].some((value) => String(value || "").toLowerCase().includes(query));
+        const matchesStatus = bookingStatusFilter === "All" ||
+            String(booking.statusName || "Unknown").toLowerCase() === bookingStatusFilter.toLowerCase();
+        return matchesQuery && matchesStatus;
+    });
+
+    const formatDateTime = (value) => value
+        ? new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+        : "Not recorded";
 
     const openCreateVenue = () => {
         setEditingVenue(null);
@@ -353,6 +422,27 @@ function StaffDashboard() {
                                     <h2>Requests requiring attention</h2>
                                 </div>
                             </div>
+                            <div className="row g-2 mb-3">
+                                <div className="col-md-8">
+                                    <Form.Control
+                                        aria-label="Search bookings"
+                                        placeholder="Search event, organiser, venue or booking ID"
+                                        value={bookingSearch}
+                                        onChange={(event) => setBookingSearch(event.target.value)}
+                                    />
+                                </div>
+                                <div className="col-md-4">
+                                    <Form.Select
+                                        aria-label="Filter bookings by status"
+                                        value={bookingStatusFilter}
+                                        onChange={(event) => setBookingStatusFilter(event.target.value)}
+                                    >
+                                        {["All", "Pending", "Approved", "Rejected", "Cancelled", "Completed"].map((status) => (
+                                            <option key={status} value={status}>{status === "All" ? "All booking statuses" : status}</option>
+                                        ))}
+                                    </Form.Select>
+                                </div>
+                            </div>
                             <Table responsive hover>
                                 <thead>
                                     <tr>
@@ -364,7 +454,7 @@ function StaffDashboard() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {bookings.map((booking) => (
+                                    {filteredBookings.map((booking) => (
                                         <tr key={booking.bookingId}>
                                             <td>{booking.eventName || shortId(booking.eventId)}</td>
                                             <td>{booking.organiserName || shortId(booking.userId)}</td>
@@ -377,30 +467,30 @@ function StaffDashboard() {
                                                     {booking.statusName || "Unknown"}
                                                 </Badge>
                                             </td>
-                                            <td>
+                                            <td className="text-nowrap">
+                                                <Button size="sm" variant="outline-primary" className="me-1 mb-1" onClick={() => openBookingDetails(booking)}>
+                                                    View details
+                                                </Button>
                                                 {booking.statusName === "Pending" && (
                                                     <>
-                                                        <button
-                                                            type="button"
-                                                            className="table-action"
-                                                            onClick={() => reviewBooking(booking, "approve")}
-                                                        >
+                                                        <Button size="sm" variant="success" className="me-1 mb-1" onClick={() => reviewBooking(booking, "approve")}>
                                                             Approve
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            className="table-action danger"
-                                                            onClick={() => reviewBooking(booking, "reject")}
-                                                        >
+                                                        </Button>
+                                                        <Button size="sm" variant="outline-danger" className="me-1 mb-1" onClick={() => reviewBooking(booking, "reject")}>
                                                             Reject
-                                                        </button>
+                                                        </Button>
                                                     </>
+                                                )}
+                                                {["Pending", "Approved"].includes(booking.statusName) && (
+                                                    <Button size="sm" variant="danger" className="mb-1" onClick={() => cancelBookingAsStaff(booking)}>
+                                                        Cancel
+                                                    </Button>
                                                 )}
                                             </td>
                                         </tr>
                                     ))}
-                                    {bookings.length === 0 && (
-                                        <tr><td colSpan={5}>No booking requests found.</td></tr>
+                                    {filteredBookings.length === 0 && (
+                                        <tr><td colSpan={5}>No bookings match the current search or status filter.</td></tr>
                                     )}
                                 </tbody>
                             </Table>
@@ -470,6 +560,88 @@ function StaffDashboard() {
 
                 </>
             )}
+
+            <Modal show={bookingDetailsOpen} onHide={() => setBookingDetailsOpen(false)} size="lg" centered scrollable>
+                <Modal.Header closeButton>
+                    <Modal.Title>Booking details</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {selectedBooking && (() => {
+                        const bookingPayment = payments
+                            .filter((payment) => payment.bookingId === selectedBooking.bookingId)
+                            .sort((a, b) => new Date(b.paymentDate || 0) - new Date(a.paymentDate || 0))[0];
+                        return (
+                            <>
+                                <div className="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                    <div>
+                                        <h5 className="mb-1">{selectedBooking.eventName || "Unnamed event"}</h5>
+                                        <p className="text-muted mb-0">Booking ID: {selectedBooking.bookingId}</p>
+                                    </div>
+                                    <Badge bg={selectedBooking.statusName === "Approved" ? "success" : selectedBooking.statusName === "Pending" ? "warning" : "secondary"} text={selectedBooking.statusName === "Pending" ? "dark" : undefined}>
+                                        {selectedBooking.statusName || "Unknown"}
+                                    </Badge>
+                                </div>
+                                <h6>Event and venue</h6>
+                                <Table bordered size="sm">
+                                    <tbody>
+                                        <tr><th>Venue</th><td>{selectedBooking.venueName || "Not recorded"}</td></tr>
+                                        <tr><th>Start</th><td>{formatDateTime(selectedBooking.startDateTime)}</td></tr>
+                                        <tr><th>End</th><td>{formatDateTime(selectedBooking.endDateTime)}</td></tr>
+                                        <tr><th>Requested on</th><td>{formatDateTime(selectedBooking.bookingDate)}</td></tr>
+                                        <tr><th>Organiser</th><td>{selectedBooking.organiserName || "Not recorded"}</td></tr>
+                                        <tr><th>Organiser user ID</th><td>{selectedBooking.userId || "Not recorded"}</td></tr>
+                                        <tr><th>Special requirements</th><td style={{ whiteSpace: "pre-wrap" }}>{selectedBooking.specialRequirements || "None provided"}</td></tr>
+                                        <tr><th>Staff/admin notes</th><td style={{ whiteSpace: "pre-wrap" }}>{selectedBooking.adminNotes || "No notes recorded"}</td></tr>
+                                        <tr><th>Responsibility acknowledgement</th><td>{selectedBooking.acknowledgementAccepted ? `Accepted (${formatDateTime(selectedBooking.acknowledgementAcceptedAt)})` : "Not recorded"}</td></tr>
+                                    </tbody>
+                                </Table>
+                                <h6 className="mt-4">Payment and refund</h6>
+                                {!bookingPayment ? (
+                                    <p className="text-muted">No payment record is linked to this booking.</p>
+                                ) : (
+                                    <>
+                                        <Table bordered size="sm">
+                                            <tbody>
+                                                <tr><th>Payment status</th><td>{bookingPayment.paymentStatus || "Unknown"}</td></tr>
+                                                <tr><th>Amount paid</th><td>R{Number(bookingPayment.amount || 0).toFixed(2)}</td></tr>
+                                                <tr><th>Payment date</th><td>{formatDateTime(bookingPayment.paymentDate)}</td></tr>
+                                                <tr><th>Reference</th><td>{bookingPayment.referenceNumber || "Not recorded"}</td></tr>
+                                                <tr><th>Refund amount</th><td>{bookingPayment.refundAmount == null ? "Not applicable" : `R${Number(bookingPayment.refundAmount).toFixed(2)}`}</td></tr>
+                                                <tr><th>Refund status</th><td>{bookingPayment.refundStatus || "Not requested"}</td></tr>
+                                                <tr><th>Refund reason</th><td>{bookingPayment.refundReason || "Not recorded"}</td></tr>
+                                                <tr><th>Refund requested</th><td>{formatDateTime(bookingPayment.refundRequestedAtUtc)}</td></tr>
+                                                <tr><th>Refund processed</th><td>{formatDateTime(bookingPayment.refundProcessedAtUtc)}</td></tr>
+                                                {bookingPayment.refundFailureReason && <tr><th>Staff follow-up</th><td>{bookingPayment.refundFailureReason}</td></tr>}
+                                            </tbody>
+                                        </Table>
+                                        {bookingPayment.refundStatus === "Failed" && (
+                                            <Button variant="warning" disabled={retryingPaymentId === bookingPayment.paymentId} onClick={() => retryRefund(bookingPayment)}>
+                                                {retryingPaymentId === bookingPayment.paymentId ? "Submitting retry…" : "Retry failed refund"}
+                                            </Button>
+                                        )}
+                                        {bookingPayment.refundStatus === "NeedsReview" && (
+                                            <p className="alert alert-warning mb-0">This refund must be reconciled with Yoco before another attempt. Do not retry it automatically.</p>
+                                        )}
+                                    </>
+                                )}
+                                <p className="small text-muted mt-3 mb-0">Staff actions are recorded by the backend. Cancellation is final and DIBA-initiated cancellations receive a full refund when a successful payment exists.</p>
+                            </>
+                        );
+                    })()}
+                </Modal.Body>
+                <Modal.Footer>
+                    {selectedBooking && selectedBooking.statusName === "Pending" && (
+                        <>
+                            <Button variant="success" onClick={() => { setBookingDetailsOpen(false); reviewBooking(selectedBooking, "approve"); }}>Approve booking</Button>
+                            <Button variant="outline-danger" onClick={() => { setBookingDetailsOpen(false); reviewBooking(selectedBooking, "reject"); }}>Reject booking</Button>
+                        </>
+                    )}
+                    {selectedBooking && ["Pending", "Approved"].includes(selectedBooking.statusName) && (
+                        <Button variant="danger" onClick={() => cancelBookingAsStaff(selectedBooking)}>Cancel booking</Button>
+                    )}
+                    <Button variant="secondary" onClick={() => setBookingDetailsOpen(false)}>Close</Button>
+                </Modal.Footer>
+            </Modal>
 
             <Modal show={venueModalOpen} onHide={closeVenueModal} size="lg" centered>
                 <Form onSubmit={saveVenue}>
