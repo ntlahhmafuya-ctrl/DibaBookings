@@ -330,13 +330,19 @@ namespace DIBA_Backend.Controllers
             var webhookTimestamp = Request.Headers["webhook-timestamp"].ToString();
             var webhookSignature = Request.Headers["webhook-signature"].ToString();
 
+            using var reader = new StreamReader(
+                Request.Body,
+                Encoding.UTF8,
+                detectEncodingFromByteOrderMarks: true,
+                leaveOpen: true);
+            var rawBody = await reader.ReadToEndAsync();
+
             if (!IsValidYocoWebhookSignature(
                     webhookSecret,
                     webhookId,
                     webhookTimestamp,
                     webhookSignature,
-                    Request.Body,
-                    out var rawBody))
+                    rawBody))
             {
                 return Unauthorized("Invalid Yoco webhook signature.");
             }
@@ -417,11 +423,8 @@ namespace DIBA_Backend.Controllers
             string webhookId,
             string timestamp,
             string signatureHeader,
-            Stream requestBody,
-            out string rawBody)
+            string rawBody)
         {
-            rawBody = string.Empty;
-
             if (string.IsNullOrWhiteSpace(webhookId) ||
                 string.IsNullOrWhiteSpace(timestamp) ||
                 string.IsNullOrWhiteSpace(signatureHeader) ||
@@ -431,14 +434,20 @@ namespace DIBA_Backend.Controllers
             }
 
             // Reject old or future-dated deliveries to reduce replay risk.
-            var timestampDate = DateTimeOffset.FromUnixTimeSeconds(timestampSeconds);
-            if (Math.Abs((DateTimeOffset.UtcNow - timestampDate).TotalMinutes) > 5)
+            DateTimeOffset timestampDate;
+            try
+            {
+                timestampDate = DateTimeOffset.FromUnixTimeSeconds(timestampSeconds);
+            }
+            catch (ArgumentOutOfRangeException)
             {
                 return false;
             }
 
-            using var reader = new StreamReader(requestBody, Encoding.UTF8, leaveOpen: true);
-            rawBody = reader.ReadToEndAsync().GetAwaiter().GetResult();
+            if (Math.Abs((DateTimeOffset.UtcNow - timestampDate).TotalMinutes) > 5)
+            {
+                return false;
+            }
 
             var secretValue = secret.StartsWith("whsec_", StringComparison.Ordinal)
                 ? secret.Substring("whsec_".Length)
