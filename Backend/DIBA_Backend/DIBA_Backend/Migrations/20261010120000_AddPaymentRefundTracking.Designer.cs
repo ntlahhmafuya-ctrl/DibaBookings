@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DIBA_Backend.Migrations
 {
     [DbContext(typeof(DIBABookingsDbContext))]
+    [Migration("20261010120000_AddPaymentRefundTracking")]
     partial class AddPaymentRefundTracking
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
