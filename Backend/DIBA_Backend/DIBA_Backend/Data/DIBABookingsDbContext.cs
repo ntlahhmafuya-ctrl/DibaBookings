@@ -45,6 +45,7 @@ namespace DIBA_Backend.Data
         public DbSet<BookingStatus> BookingStatuses { get; set; }
         public DbSet<Event> Events { get; set; }
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<PrivacyRequest> PrivacyRequests { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Venue> Venues { get; set; }
         public DbSet<VenueFeature> VenueFeatures { get; set; }
@@ -490,6 +491,24 @@ namespace DIBA_Backend.Data
                 .Property(v => v.Price)
                 .HasPrecision(18, 2);
 
+
+
+            // =========================================================
+            // USER -> PRIVACY REQUEST
+            // One User can submit many PrivacyRequests
+            // =========================================================
+            // Responsibility: connect each privacy request to its requester.
+            // Restrict prevents deleting an account from silently erasing
+            // its privacy-request history. Retention/deletion must follow
+            // the responsible organisation's approved policy.
+            modelBuilder.Entity<PrivacyRequest>()
+                .HasOne(request => request.User)
+                .WithMany()
+                .HasForeignKey(request => request.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PrivacyRequest>()
+                .HasIndex(request => new { request.UserId, request.SubmittedAtUtc });
 
             // =========================================================
             // SEED ROLES
