@@ -1,3 +1,5 @@
+// ADMINISTRATOR API SERVICE
+// Responsibility: centralise HTTP calls for dashboard summaries, users, audit logs, roles, and privacy-request review.
 import api from "./api";
 
 export const getAdminOverview = () =>
