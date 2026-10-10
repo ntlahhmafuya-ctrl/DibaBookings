@@ -97,6 +97,8 @@ namespace DIBA_Backend.Migrations
 
                     b.HasIndex("VenueId");
 
+                    b.HasIndex("VenueId", "StartDateTime", "EndDateTime");
+
                     b.ToTable("Bookings");
                 });
 
@@ -318,6 +320,50 @@ namespace DIBA_Backend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DIBA_Backend.Models.Entities.EmailDeliveryLog", b =>
+                {
+                    b.Property<Guid>("EmailDeliveryLogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AttemptedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid?>("NotificationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RecipientEmail")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)");
+
+                    b.Property<DateTime?>("SentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("EmailDeliveryLogId");
+
+                    b.HasIndex("AttemptedAtUtc");
+
+                    b.ToTable("EmailDeliveryLogs");
+                });
+
             modelBuilder.Entity("DIBA_Backend.Models.Entities.User", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -326,7 +372,8 @@ namespace DIBA_Backend.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
@@ -347,6 +394,8 @@ namespace DIBA_Backend.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("UserId");
+
+                    b.HasIndex("Email").IsUnique();
 
                     b.HasIndex("RoleId");
 
@@ -439,7 +488,8 @@ namespace DIBA_Backend.Migrations
 
                     b.Property<string>("PaymentStatus")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<decimal?>("RefundAmount")
                         .HasPrecision(18, 2)
@@ -474,7 +524,7 @@ namespace DIBA_Backend.Migrations
 
                     b.HasKey("PaymentId");
 
-                    b.HasIndex("BookingId");
+                    b.HasIndex("BookingId").IsUnique().HasFilter("[PaymentStatus] <> N'Failed'");
 
                     b.ToTable("Payments");
                 });
