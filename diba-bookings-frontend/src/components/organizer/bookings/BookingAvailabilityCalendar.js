@@ -15,6 +15,7 @@ function BookingCalendar({
     const [loading, setLoading] = useState(false);
     const [availabilityError, setAvailabilityError] = useState("");
     const [selectedSlot, setSelectedSlot] = useState(null);
+    const [durationHours, setDurationHours] = useState(1);
 
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -54,6 +55,7 @@ function BookingCalendar({
         setLoading(true);
         setAvailabilityError("");
         setSelectedSlot(null);
+        setDurationHours(1);
 
         try {
             const response = await getVenueAvailability(
@@ -186,9 +188,50 @@ function BookingCalendar({
         }
 
         setSelectedSlot(slot);
+        setDurationHours(1);
 
         if (onTimeSelect) {
             onTimeSelect(slot);
+        }
+    };
+
+    const getEndForDuration = (start, hours) => {
+        const end = new Date(start);
+        end.setHours(end.getHours() + hours);
+        return end;
+    };
+
+    const availableDurations = selectedSlot
+        ? Array.from(
+              { length: 18 - selectedSlot.start.getHours() },
+              (_, index) => index + 1
+          ).filter((hours) => {
+              const end = getEndForDuration(
+                  selectedSlot.start,
+                  hours
+              );
+
+              return !isSlotBooked(
+                  selectedSlot.start,
+                  end
+              );
+          })
+        : [];
+
+    const handleDurationChange = (event) => {
+        const hours = Number(event.target.value);
+        const end = getEndForDuration(
+            selectedSlot.start,
+            hours
+        );
+
+        setDurationHours(hours);
+
+        if (onTimeSelect) {
+            onTimeSelect({
+                start: selectedSlot.start,
+                end
+            });
         }
     };
 
@@ -271,8 +314,9 @@ function BookingCalendar({
                         <h4>{selectedDateText}</h4>
 
                         <p>
-                            Select an available one-hour
-                            time slot.
+                            Select an available start time, then choose
+                            how many hours you need. Bookings can run
+                            from 08:00 until 18:00.
                         </p>
                     </div>
 
@@ -352,6 +396,48 @@ function BookingCalendar({
                                     );
                                 })}
 
+                            </div>
+                        )}
+
+                    {!loading &&
+                        !availabilityError &&
+                        selectedSlot && (
+                            <div className="duration-selector">
+                                <label htmlFor="booking-duration">
+                                    Booking duration
+                                </label>
+
+                                <select
+                                    id="booking-duration"
+                                    value={durationHours}
+                                    onChange={handleDurationChange}
+                                >
+                                    {availableDurations.map((hours) => (
+                                        <option
+                                            key={hours}
+                                            value={hours}
+                                        >
+                                            {hours} {hours === 1 ? "hour" : "hours"}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                <p className="availability-message">
+                                    Selected time: {formatTime(selectedSlot.start)} –{" "}
+                                    {formatTime(
+                                        getEndForDuration(
+                                            selectedSlot.start,
+                                            durationHours
+                                        )
+                                    )}
+                                </p>
+
+                                {availableDurations.length === 0 && (
+                                    <p className="availability-message error">
+                                        No available duration remains for this start time.
+                                        Please choose another start time.
+                                    </p>
+                                )}
                             </div>
                         )}
                 </div>
