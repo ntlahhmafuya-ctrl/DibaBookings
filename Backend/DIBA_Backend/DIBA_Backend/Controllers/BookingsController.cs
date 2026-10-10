@@ -1068,6 +1068,76 @@ namespace DIBA_Backend.Controllers
         }
 
 
+        // PUT: api/Bookings/{id}/complete
+        // Staff can close out an approved booking only after its scheduled end time.
+        [HttpPut("{id:guid}/complete")]
+        [Authorize(Roles = "Administrator,Staff")]
+        public async Task<IActionResult> CompleteBooking(Guid id)
+        {
+            if (!Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out Guid userId))
+            {
+                return Unauthorized("User ID could not be determined.");
+            }
+
+            var booking = await _dbContext.Bookings
+                .Include(b => b.BookingStatus)
+                .FirstOrDefaultAsync(b => b.BookingId == id);
+
+            if (booking == null)
+            {
+                return NotFound("Booking not found.");
+            }
+
+            if (!string.Equals(booking.BookingStatus?.StatusName, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                return Conflict("Only approved bookings can be marked as completed.");
+            }
+
+            if (booking.EndDateTime > GetSouthAfricaLocalNow())
+            {
+                return Conflict("This booking cannot be completed before its scheduled end time.");
+            }
+
+            var completedStatus = await _dbContext.BookingStatuses
+                .FirstOrDefaultAsync(s => s.StatusName == "Completed");
+
+            if (completedStatus == null)
+            {
+                return StatusCode(500, "Completed booking status could not be found.");
+            }
+
+            booking.BookingStatusId = completedStatus.BookingStatusId;
+
+            _dbContext.AuditLogs.Add(new AuditLog
+            {
+                AuditLogId = Guid.NewGuid(),
+                Action = "Booking Completed",
+                LogDescription = $"Staff/admin user {userId} marked booking {booking.BookingId} as completed.",
+                Timestamp = DateTime.UtcNow,
+                UserId = userId
+            });
+
+            _dbContext.Notifications.Add(new Notification
+            {
+                NotificationId = Guid.NewGuid(),
+                NotificationType = "Booking Completed",
+                Message = "Your venue booking has been marked as completed.",
+                DateCreated = DateTime.UtcNow,
+                IsRead = false,
+                UserId = booking.UserId,
+                BookingId = booking.BookingId
+            });
+
+            await _dbContext.SaveChangesAsync();
+
+            return Ok(new
+            {
+                bookingId = booking.BookingId,
+                statusName = completedStatus.StatusName,
+                message = "Booking marked as completed."
+            });
+        }
+
         // PUT: api/Bookings/{id}/cancel
         [HttpPut("{id:guid}/cancel")]
         public async Task<IActionResult> CancelBooking(Guid id)
