@@ -677,10 +677,17 @@ function StaffDashboard() {
                                 <Table bordered size="sm">
                                     <tbody>
                                         <tr><th>Venue</th><td>{selectedBooking.venueName || "Not recorded"}</td></tr>
+                                        <tr><th>Venue location</th><td>{selectedBooking.venueLocation || "Not recorded"}</td></tr>
+                                        <tr><th>Venue capacity</th><td>{selectedBooking.venueCapacity || "Not recorded"}</td></tr>
+                                        <tr><th>Venue price</th><td>{"R" + Number(selectedBooking.venuePrice || 0).toFixed(2)}</td></tr>
+                                        <tr><th>Event type</th><td>{selectedBooking.eventType || "Not specified"}</td></tr>
+                                        <tr><th>Expected attendance</th><td>{selectedBooking.eventAttendance || "Not specified"}</td></tr>
+                                        <tr><th>Event description</th><td style={{ whiteSpace: "pre-wrap" }}>{selectedBooking.eventDescription || "No description provided"}</td></tr>
                                         <tr><th>Start</th><td>{formatDateTime(selectedBooking.startDateTime)}</td></tr>
                                         <tr><th>End</th><td>{formatDateTime(selectedBooking.endDateTime)}</td></tr>
                                         <tr><th>Requested on</th><td>{formatDateTime(selectedBooking.bookingDate)}</td></tr>
                                         <tr><th>Organiser</th><td>{selectedBooking.organiserName || "Not recorded"}</td></tr>
+                                        <tr><th>Organiser email</th><td>{selectedBooking.organiserEmail || "Not recorded"}</td></tr>
                                         <tr><th>Organiser user ID</th><td>{selectedBooking.userId || "Not recorded"}</td></tr>
                                         <tr><th>Special requirements</th><td style={{ whiteSpace: "pre-wrap" }}>{selectedBooking.specialRequirements || "None provided"}</td></tr>
                                         <tr><th>Staff/admin notes</th><td style={{ whiteSpace: "pre-wrap" }}>{selectedBooking.adminNotes || "No notes recorded"}</td></tr>
