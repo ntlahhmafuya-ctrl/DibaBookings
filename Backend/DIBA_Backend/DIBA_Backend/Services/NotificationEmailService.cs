@@ -32,11 +32,20 @@ namespace DIBA_Backend.Services
             string subject,
             string body)
         {
-            var recipient = await _dbContext.Users
-                .AsNoTracking()
-                .Where(user => user.UserId == userId)
-                .Select(user => user.Email)
-                .FirstOrDefaultAsync();
+            string? recipient;
+            try
+            {
+                recipient = await _dbContext.Users
+                    .AsNoTracking()
+                    .Where(user => user.UserId == userId)
+                    .Select(user => user.Email)
+                    .FirstOrDefaultAsync();
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Could not look up the email recipient for notification {NotificationId}.", notificationId);
+                return;
+            }
 
             if (string.IsNullOrWhiteSpace(recipient))
             {
@@ -99,7 +108,7 @@ namespace DIBA_Backend.Services
         {
             try
             {
-                _dbContext.EmailDeliveryLogs.Add(new EmailDeliveryLog
+                var deliveryLog = new EmailDeliveryLog
                 {
                     UserId = userId,
                     NotificationId = notificationId,
@@ -111,13 +120,25 @@ namespace DIBA_Backend.Services
                         : errorMessage[..Math.Min(errorMessage.Length, 1000)],
                     AttemptedAtUtc = DateTime.UtcNow,
                     SentAtUtc = sentAtUtc
-                });
+                };
 
+                _dbContext.EmailDeliveryLogs.Add(deliveryLog);
                 await _dbContext.SaveChangesAsync();
             }
             catch (Exception exception)
             {
-                // Logging failure must not break booking/payment processing.
+                // Detach a failed log insert so it cannot break a later
+                // SaveChanges call in the same booking/payment request.
+                var pendingLogs = _dbContext.ChangeTracker
+                    .Entries<EmailDeliveryLog>()
+                    .Where(entry => entry.State == EntityState.Added)
+                    .ToList();
+
+                foreach (var pendingLog in pendingLogs)
+                {
+                    pendingLog.State = EntityState.Detached;
+                }
+
                 _logger.LogError(exception, "Could not persist notification email delivery log.");
             }
         }
