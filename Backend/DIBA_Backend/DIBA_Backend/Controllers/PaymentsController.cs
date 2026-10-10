@@ -368,19 +368,22 @@ namespace DIBA_Backend.Controllers
                     !payload.TryGetProperty("currency", out var currencyElement) ||
                     !string.Equals(currencyElement.GetString(), "ZAR", StringComparison.OrdinalIgnoreCase) ||
                     !payload.TryGetProperty("metadata", out var metadata) ||
-                    !metadata.TryGetProperty("checkoutId", out var checkoutIdElement))
+                    !metadata.TryGetProperty("reference", out var referenceElement))
                 {
                     return BadRequest("Yoco webhook payload is missing required payment details.");
                 }
 
-                var checkoutId = checkoutIdElement.GetString();
-                if (string.IsNullOrWhiteSpace(checkoutId))
+                // The checkout is created with our DIBA reference in metadata.
+                // Yoco cannot echo a checkout ID in metadata that we did not know
+                // when creating the checkout, so match using the reference we set.
+                var referenceNumber = referenceElement.GetString();
+                if (string.IsNullOrWhiteSpace(referenceNumber))
                 {
-                    return BadRequest("Yoco checkout ID is missing.");
+                    return BadRequest("DIBA payment reference is missing from the Yoco webhook.");
                 }
 
                 var payment = await dbContext.Payments
-                    .FirstOrDefaultAsync(p => p.YocoCheckoutId == checkoutId);
+                    .FirstOrDefaultAsync(p => p.ReferenceNumber == referenceNumber);
 
                 if (payment == null)
                 {
