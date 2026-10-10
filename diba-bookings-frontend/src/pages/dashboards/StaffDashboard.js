@@ -30,7 +30,8 @@ const emptyVenueForm = {
     location: "",
     latitude: "",
     longitude: "",
-    venueStatus: "Available"
+    venueStatus: "Available",
+    venueImageData: ""
 };
 
 const emptyFeatureForm = {
@@ -122,7 +123,8 @@ function StaffDashboard() {
             location: venue.location || "",
             latitude: String(venue.latitude ?? ""),
             longitude: String(venue.longitude ?? ""),
-            venueStatus: venue.venueStatus || "Available"
+            venueStatus: venue.venueStatus || "Available",
+            venueImageData: venue.venueImageData || ""
         });
         setVenueModalOpen(true);
     };
@@ -168,7 +170,8 @@ function StaffDashboard() {
             location: venueForm.location.trim(),
             latitude,
             longitude,
-            venueStatus: venueForm.venueStatus
+            venueStatus: venueForm.venueStatus,
+            venueImageData: venueForm.venueImageData || null
         };
 
         setSavingVenue(true);
@@ -412,6 +415,42 @@ function StaffDashboard() {
                             <Form.Label>Venue name *</Form.Label>
                             <Form.Control required maxLength={150} value={venueForm.venueName}
                                 onChange={(event) => setVenueForm({ ...venueForm, venueName: event.target.value })} />
+                        </Form.Group>
+                        <Form.Group className="mb-3" controlId="venueImage">
+                            <Form.Label>Venue photo</Form.Label>
+                            <Form.Control
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={(event) => {
+                                    const file = event.target.files?.[0];
+                                    if (!file) return;
+                                    if (file.size > 2 * 1024 * 1024) {
+                                        toast.error("Choose an image smaller than 2 MB.");
+                                        event.target.value = "";
+                                        return;
+                                    }
+                                    const reader = new FileReader();
+                                    reader.onload = () => setVenueForm((current) => ({
+                                        ...current,
+                                        venueImageData: typeof reader.result === "string" ? reader.result : current.venueImageData
+                                    }));
+                                    reader.onerror = () => toast.error("Could not read the selected image.");
+                                    reader.readAsDataURL(file);
+                                }}
+                            />
+                            <Form.Text muted>JPG, PNG or WebP. Maximum size: 2 MB. Leave empty to keep the current photo when editing.</Form.Text>
+                            {venueForm.venueImageData && (
+                                <div className="mt-3">
+                                    <img src={venueForm.venueImageData} alt="Venue preview"
+                                        style={{ width: "100%", maxWidth: "420px", maxHeight: "220px", objectFit: "cover", borderRadius: "8px" }} />
+                                    <div className="mt-2">
+                                        <Button type="button" size="sm" variant="outline-danger"
+                                            onClick={() => setVenueForm((current) => ({ ...current, venueImageData: "" }))}>
+                                            Remove photo
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                         </Form.Group>
                         <Form.Group className="mb-3" controlId="venueDescription">
                             <Form.Label>Description</Form.Label>
