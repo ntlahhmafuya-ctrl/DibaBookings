@@ -1254,13 +1254,14 @@ namespace DIBA_Backend.Controllers
                                 "Yoco returned an unrecognised refund status. Check the Yoco dashboard before retrying.";
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         // The request may have reached Yoco even if the response was lost.
                         // Do not automatically retry; reconcile with Yoco first to avoid a duplicate refund.
+                        // Keep provider response details out of organiser-visible payment data.
                         payment.RefundStatus = "NeedsReview";
                         payment.RefundFailureReason =
-                            $"Yoco refund outcome could not be confirmed. Reconcile with Yoco before retrying. Details: {ex.Message}";
+                            "Yoco refund outcome could not be confirmed. DIBA staff must reconcile with Yoco before retrying.";
                     }
                 }
 
