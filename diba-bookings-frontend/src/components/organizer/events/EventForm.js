@@ -21,6 +21,16 @@ function EventForm({
             : null
     );
 
+    // Match the backend rule using the user's local calendar date.
+    const earliestAllowedDateTime = new Date();
+    earliestAllowedDateTime.setHours(0, 0, 0, 0);
+    earliestAllowedDateTime.setDate(earliestAllowedDateTime.getDate() + 7);
+    const earliestAllowedDateTimeValue = [
+        earliestAllowedDateTime.getFullYear(),
+        String(earliestAllowedDateTime.getMonth() + 1).padStart(2, "0"),
+        String(earliestAllowedDateTime.getDate()).padStart(2, "0")
+    ].join("-") + "T00:00";
+
     const handleDateSelect = (date) => {
         setSelectedDate(date);
 
@@ -159,8 +169,7 @@ function EventForm({
                             <h3>Select your event date</h3>
 
                             <p>
-                                Choose a date to continue with your venue
-                                booking.
+                                Choose a date at least 7 calendar days from today. Earlier dates are unavailable.
                             </p>
                         </div>
 
@@ -207,6 +216,7 @@ function EventForm({
                         <input
                             required
                             type="datetime-local"
+                            min={earliestAllowedDateTimeValue}
                             value={form.startDateTime}
                             onChange={(e) =>
                                 setForm({
@@ -221,6 +231,7 @@ function EventForm({
                         <input
                             required
                             type="datetime-local"
+                            min={earliestAllowedDateTimeValue}
                             value={form.endDateTime}
                             onChange={(e) =>
                                 setForm({
