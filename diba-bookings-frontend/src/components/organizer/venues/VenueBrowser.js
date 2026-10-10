@@ -1,15 +1,6 @@
 import { useState } from "react";
-import conferenceCentre from "../../../assets/images/Conference centre.jpg";
-import theatreImage from "../../../assets/images/Theatre (2).jpg";
-import diningImage from "../../../assets/images/Dining Room.jpg";
 import VenueCard from "./VenueCard";
 import Empty from "../../common/EmptyState";
-
-const images = [
-    conferenceCentre,
-    theatreImage,
-    diningImage
-];
 
 function VenueBrowser({
     venues,
@@ -182,16 +173,11 @@ function VenueBrowser({
 
                 <div className="venue-browser-grid">
 
-                    {filteredVenues.map((venue, index) => (
+                    {filteredVenues.map((venue) => (
 
                         <VenueCard
                             key={venue.venueId}
                             venue={venue}
-                            image={
-                                images[
-                                    index % images.length
-                                ]
-                            }
                             onOpen={onOpen}
                         />
 
