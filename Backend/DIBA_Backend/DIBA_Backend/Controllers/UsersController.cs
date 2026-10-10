@@ -25,6 +25,8 @@ namespace DIBA_Backend.Controllers
             _dbContext = dbContext;
         }
 
+        // FUNCTION: GetMyProfile
+        // RESPONSIBILITY: return only the authenticated user's own profile.
         [HttpGet("me")]
         public async Task<IActionResult> GetMyProfile()
         {
@@ -82,6 +84,8 @@ namespace DIBA_Backend.Controllers
             return Ok(response);
         }
 
+        // FUNCTION: ExportMyData
+        // RESPONSIBILITY: export the authenticated user's account, events, bookings, payment summaries, and notifications.
         // Provides the authenticated user with a copy of their own account-related data.
         // The user ID always comes from the validated token, never from a request parameter.
         [HttpGet("me/export")]
@@ -185,6 +189,8 @@ namespace DIBA_Backend.Controllers
             return Ok(export);
         }
 
+        // FUNCTION: GetUsers
+        // RESPONSIBILITY: allow Administrators to retrieve user summaries for user management.
         [HttpGet]
 
         // Reference: Microsoft Learn, "Role-based authorization in ASP.NET Core".
@@ -221,6 +227,8 @@ namespace DIBA_Backend.Controllers
             return Ok(users);
         }
 
+        // FUNCTION: UpdateMyProfile
+        // RESPONSIBILITY: update the authenticated user's own name and email while preventing duplicate email addresses.
         [HttpPut("me")]
         public async Task<IActionResult> UpdateMyProfile(
             UpdateUserDto updateUser)
