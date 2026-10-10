@@ -5,19 +5,25 @@ function VenueCard({ venue, onOpen }) {
         <article className="browse-venue-card">
 
             <div className="venue-card-image">
-                {venue.venueImageData ? (
+                {venue.venueImageData && (
                     <img
                         src={venue.venueImageData}
                         alt={`Photo of ${venue.venueName}`}
                         onError={(event) => {
-                            event.currentTarget.style.display = "none";
+                            event.currentTarget.hidden = true;
+                            const placeholder = event.currentTarget.parentElement?.querySelector(".venue-image-placeholder");
+                            if (placeholder) placeholder.hidden = false;
                         }}
                     />
-                ) : (
-                    <div className="venue-image-placeholder" role="img" aria-label={`No photo available for ${venue.venueName}`}>
-                        <span>No venue photo</span>
-                    </div>
                 )}
+                <div
+                    className="venue-image-placeholder"
+                    role="img"
+                    aria-label={`No photo available for ${venue.venueName}`}
+                    hidden={Boolean(venue.venueImageData)}
+                >
+                    <span>No venue photo</span>
+                </div>
             </div>
 
             <div className="browse-venue-body">
