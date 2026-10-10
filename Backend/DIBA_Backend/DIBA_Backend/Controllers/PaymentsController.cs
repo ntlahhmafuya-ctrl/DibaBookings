@@ -342,7 +342,8 @@ namespace DIBA_Backend.Controllers
 
             // Reject old or future-dated webhook requests to reduce replay risk.
             var currentSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (Math.Abs(currentSeconds - timestampSeconds) > 300)
+            if (timestampSeconds < currentSeconds - 300 ||
+                timestampSeconds > currentSeconds + 300)
             {
                 return false;
             }
