@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/dashboards/Dashboard";
 import LandingPage from "./pages/LandingPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Profile from "./pages/Profile";
 
 function App() {
     return (
@@ -37,6 +38,12 @@ function App() {
                 <Route
                     path="/privacy"
                     element={<PrivacyPolicy />}
+                />
+
+                {/* PROFILE ROUTE: lets users manage their own account details. */}
+                <Route
+                    path="/profile"
+                    element={<Profile />}
                 />
             </Routes>
 
