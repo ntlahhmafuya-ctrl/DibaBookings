@@ -374,6 +374,12 @@ function StaffDashboard() {
                             Booking requests
                         </Button>
                         <Button
+                            variant={activeScreen === "payments" ? "primary" : "outline-primary"}
+                            onClick={() => setActiveScreen("payments")}
+                        >
+                            Payments &amp; refunds
+                        </Button>
+                        <Button
                             variant={activeScreen === "venues" ? "primary" : "outline-primary"}
                             onClick={() => setActiveScreen("venues")}
                         >
@@ -495,6 +501,73 @@ function StaffDashboard() {
                                 </tbody>
                             </Table>
                         </div>
+                        </section>
+                    )}
+
+
+                    {activeScreen === "payments" && (
+                        <section className="content-grid">
+                            <div className="panel table-panel">
+                                <div className="panel-heading">
+                                    <div>
+                                        <p className="eyebrow">PAYMENT OPERATIONS</p>
+                                        <h2>Payments and refunds</h2>
+                                        <p className="text-muted mb-0">Review payment outcomes and follow up on failed or uncertain refunds.</p>
+                                    </div>
+                                    <Button variant="outline-primary" onClick={loadData}>Refresh</Button>
+                                </div>
+                                <Table responsive hover>
+                                    <thead>
+                                        <tr>
+                                            <th>Booking</th>
+                                            <th>Payment</th>
+                                            <th>Amount</th>
+                                            <th>Refund</th>
+                                            <th>Refund reason / follow-up</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {payments.map((payment) => {
+                                            const booking = bookings.find((item) => item.bookingId === payment.bookingId);
+                                            return (
+                                                <tr key={payment.paymentId}>
+                                                    <td>
+                                                        <strong>{booking?.eventName || shortId(payment.bookingId)}</strong>
+                                                        <div className="small text-muted">{booking?.organiserName || "Organiser not available"}</div>
+                                                        <div className="small text-muted">{shortId(payment.bookingId)}</div>
+                                                    </td>
+                                                    <td>
+                                                        <Badge bg={payment.paymentStatus === "Succeeded" ? "success" : payment.paymentStatus === "Pending" ? "warning" : "secondary"} text={payment.paymentStatus === "Pending" ? "dark" : undefined}>
+                                                            {payment.paymentStatus || "Unknown"}
+                                                        </Badge>
+                                                        <div className="small text-muted">{payment.referenceNumber || "No reference"}</div>
+                                                    </td>
+                                                    <td>{"R" + Number(payment.amount || 0).toFixed(2)}</td>
+                                                    <td>
+                                                        {payment.refundAmount == null ? "—" : "R" + Number(payment.refundAmount).toFixed(2)}
+                                                        <div>
+                                                            <Badge bg={payment.refundStatus === "Succeeded" ? "success" : ["Pending", "NeedsReview"].includes(payment.refundStatus) ? "warning" : payment.refundStatus === "Failed" ? "danger" : "secondary"} text={["Pending", "NeedsReview"].includes(payment.refundStatus) ? "dark" : undefined}>
+                                                                {payment.refundStatus || "No refund"}
+                                                            </Badge>
+                                                        </div>
+                                                    </td>
+                                                    <td className="small">
+                                                        {payment.refundFailureReason || payment.refundReason || "—"}
+                                                        {payment.refundProcessedAtUtc && <div className="text-muted">Processed: {formatDateTime(payment.refundProcessedAtUtc)}</div>}
+                                                    </td>
+                                                    <td className="text-nowrap">
+                                                        {booking && <Button size="sm" variant="outline-primary" className="me-1 mb-1" onClick={() => openBookingDetails(booking)}>View booking</Button>}
+                                                        {payment.refundStatus === "Failed" && <Button size="sm" variant="warning" disabled={retryingPaymentId === payment.paymentId} onClick={() => retryRefund(payment)}>{retryingPaymentId === payment.paymentId ? "Retrying…" : "Retry refund"}</Button>}
+                                                        {payment.refundStatus === "NeedsReview" && <span className="small text-warning-emphasis">Reconcile with Yoco before retrying</span>}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {payments.length === 0 && <tr><td colSpan={6}>No payment records were returned. Use Refresh to try again.</td></tr>}
+                                    </tbody>
+                                </Table>
+                            </div>
                         </section>
                     )}
 
