@@ -8,6 +8,7 @@ import StatCard from "../../components/common/StatCard";
 import {
     approveBooking,
     cancelBooking,
+    completeBooking,
     getBookings,
     rejectBooking
 } from "../../services/bookingService";
@@ -146,6 +147,19 @@ function StaffDashboard() {
             await loadData();
         } catch (error) {
             toast.error(errorMessage(error, "Could not cancel this booking."));
+        }
+    };
+
+    const markBookingCompleted = async (booking) => {
+        if (!window.confirm("Mark this approved booking as completed? The backend will check that its scheduled end time has passed.")) return;
+        try {
+            await completeBooking(booking.bookingId);
+            toast.success("Booking marked as completed.");
+            setBookingDetailsOpen(false);
+            setSelectedBooking(null);
+            await loadData();
+        } catch (error) {
+            toast.error(errorMessage(error, "Could not complete this booking."));
         }
     };
 
@@ -492,6 +506,11 @@ function StaffDashboard() {
                                                         Cancel
                                                     </Button>
                                                 )}
+                                                {booking.statusName === "Approved" && (
+                                                    <Button size="sm" variant="outline-success" className="ms-1 mb-1" onClick={() => markBookingCompleted(booking)}>
+                                                        Complete
+                                                    </Button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -711,6 +730,9 @@ function StaffDashboard() {
                     )}
                     {selectedBooking && ["Pending", "Approved"].includes(selectedBooking.statusName) && (
                         <Button variant="danger" onClick={() => cancelBookingAsStaff(selectedBooking)}>Cancel booking</Button>
+                    )}
+                    {selectedBooking && selectedBooking.statusName === "Approved" && (
+                        <Button variant="outline-success" onClick={() => markBookingCompleted(selectedBooking)}>Mark completed</Button>
                     )}
                     <Button variant="secondary" onClick={() => setBookingDetailsOpen(false)}>Close</Button>
                 </Modal.Footer>
