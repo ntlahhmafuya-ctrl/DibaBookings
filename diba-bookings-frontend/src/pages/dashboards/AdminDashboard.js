@@ -13,6 +13,8 @@ import {
     getAuditLogs,
     getRoles,
     getUsers,
+    getPrivacyRequests,
+    updatePrivacyRequest,
     updateUserRole,
     updateUserStatus
 } from "../../services/adminService";
@@ -25,6 +27,7 @@ function AdminDashboard() {
     const [users, setUsers] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [logs, setLogs] = useState([]);
+    const [privacyRequests, setPrivacyRequests] = useState([]);
     const [roles, setRoles] = useState([]);
     const [query, setQuery] = useState("");
     const [activeSection, setActiveSection] = useState("overview");
@@ -47,19 +50,22 @@ function AdminDashboard() {
                 userResponse,
                 bookingResponse,
                 logResponse,
-                roleResponse
+                roleResponse,
+                privacyResponse
             ] = await Promise.all([
                 getAdminOverview(),
                 getUsers(),
                 getBookings(),
                 getAuditLogs(),
-                getRoles()
+                getRoles(),
+                getPrivacyRequests()
             ]);
             setOverview(summary.data);
             setUsers(userResponse.data);
             setBookings(bookingResponse.data);
             setLogs(logResponse.data);
             setRoles(roleResponse.data);
+            setPrivacyRequests(privacyResponse.data);
             setNewUser((current) => ({
                 ...current,
                 roleId:
@@ -148,6 +154,30 @@ function AdminDashboard() {
         }
     };
 
+
+    // REVIEW PRIVACY REQUEST: let an Administrator update status and record a response for the requester.
+    const reviewPrivacyRequest = async (request) => {
+        const status = window.prompt(
+            "Enter status: Submitted, In Review, Need More Information, Resolved, or Rejected",
+            request.status
+        );
+        if (!status) return;
+
+        const response = window.prompt(
+            "Enter a response for the requester (optional):",
+            request.response || ""
+        );
+        if (response === null) return;
+
+        try {
+            await updatePrivacyRequest(request.privacyRequestId, { status, response });
+            toast.success("Privacy request updated.");
+            await loadData();
+        } catch (error) {
+            toast.error(error.response?.data || "Could not update privacy request.");
+        }
+    };
+
     const updateNewUserField = (field, value) => {
         setNewUser((current) => ({
             ...current,
@@ -183,6 +213,8 @@ function AdminDashboard() {
                     users={filteredUsers}
                     bookings={filteredBookings}
                     logs={logs}
+                    privacyRequests={privacyRequests}
+                    onUpdatePrivacyRequest={reviewPrivacyRequest}
                     onCreateUser={() => setShowCreate(true)}
                     onChangeRole={changeRole}
                     onUpdateUser={updateUser}
