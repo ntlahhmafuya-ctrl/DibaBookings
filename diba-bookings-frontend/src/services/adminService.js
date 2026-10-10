@@ -17,3 +17,10 @@ export const updateUserRole = (userId, roleId) =>
 
 export const createUser = (user) =>
     api.post("/Administration/users", user);
+
+
+// PRIVACY REQUESTS: administrator queue and status updates for user-submitted privacy requests.
+export const getPrivacyRequests = () => api.get("/PrivacyRequests");
+
+export const updatePrivacyRequest = (requestId, update) =>
+    api.put(`/PrivacyRequests/${requestId}`, update);
