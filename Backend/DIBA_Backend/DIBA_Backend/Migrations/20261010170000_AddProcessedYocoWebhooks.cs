@@ -1,10 +1,13 @@
 using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace DIBA_Backend.Migrations
 {
+    [DbContext(typeof(DIBA_Backend.Data.DIBABookingsDbContext))]
+    [Migration("20261010170000_AddProcessedYocoWebhooks")]
     public partial class AddProcessedYocoWebhooks : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
