@@ -267,6 +267,25 @@ namespace DIBA_Backend.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("DIBA_Backend.Models.Entities.ProcessedYocoWebhook", b =>
+                {
+                    b.Property<string>("WebhookId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("ProcessedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("WebhookId");
+
+                    b.ToTable("ProcessedYocoWebhooks");
+                });
+
             modelBuilder.Entity("DIBA_Backend.Models.Entities.Role", b =>
                 {
                     b.Property<Guid>("RoleId")
