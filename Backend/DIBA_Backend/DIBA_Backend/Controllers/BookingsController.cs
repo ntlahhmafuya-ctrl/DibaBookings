@@ -700,6 +700,8 @@ namespace DIBA_Backend.Controllers
             // Reference: JedAngelo, "ConferenceBookingApi".
             // Similar domain logic: booking updates are subject to
             // conflict checking.
+            await using var bookingTransaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             var hasConflict = await _dbContext.Bookings
                 .AnyAsync(booking =>
                     booking.BookingId != id &&
