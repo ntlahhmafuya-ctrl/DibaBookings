@@ -78,8 +78,8 @@ Defines the stored request type, description, status, timestamps, requester, adm
 ### Privacy request DTOs — `Backend/DIBA_Backend/DIBA_Backend/Dto/PrivacyRequests/`
 `CreatePrivacyRequestDto` accepts only request type and description; the API gets the user ID from the token. `UpdatePrivacyRequestDto` accepts the administrator's new status and optional response.
 
-### Privacy request database setup — `Backend/DIBA_Backend/DatabaseScripts/CreatePrivacyRequests.sql`
-Creates the SQL Server table and indexes required for privacy request tracking. Run this once against the correct DIBA Bookings database before testing the feature. The application currently does not automatically apply this script.
+### Privacy request database setup — EF Core migration and SQL script
+`Backend/DIBA_Backend/DIBA_Backend/Migrations/20261010140000_AddPrivacyRequests.cs` creates the `PrivacyRequests` table when it is missing. Apply it to the same database used by DIBA Bookings with `dotnet ef database update` from the backend project directory. The migration checks for an existing table because `Backend/DIBA_Backend/DatabaseScripts/CreatePrivacyRequests.sql` is also provided as a manual setup alternative. The application does not automatically apply migrations at startup. Do not run the SQL script and then assume EF migration history was updated; run the migration command as well so the migration is recorded.
 
 ### Administrator privacy queue — `diba-bookings-frontend/src/components/admin/AdminSectionNavigation.js`, `AdminDashboard.js`, `AdminRecordsPanel.js`, and `services/adminService.js`
 Responsible for showing the privacy request section to Administrators, loading the request queue, and allowing an Administrator to update status and record a response.
