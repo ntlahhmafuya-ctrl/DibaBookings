@@ -48,8 +48,12 @@ function PrivacyPolicy() {
             const response = await api.get("/PrivacyRequests/my");
             setPrivacyRequests(response.data);
         } catch (error) {
+            const errorData = error.response?.data;
             setRequestMessage(
-                error.response?.data || "We could not submit your request. Please sign in and try again."
+                typeof errorData === "string"
+                    ? errorData
+                    : errorData?.detail || errorData?.title || errorData?.message ||
+                      "We could not submit your request. Please sign in and try again."
             );
         } finally {
             setSubmittingRequest(false);
