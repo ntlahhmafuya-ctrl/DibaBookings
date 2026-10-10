@@ -168,6 +168,21 @@ namespace DIBA_Backend.Controllers
                 })
                 .ToListAsync();
 
+            // PRIVACY REQUEST EXPORT: include the request history linked to this account in the user's data copy.
+            var privacyRequests = await _dbContext.PrivacyRequests
+                .AsNoTracking()
+                .Where(item => item.UserId == userGuid)
+                .Select(item => new
+                {
+                    item.RequestType,
+                    item.Description,
+                    item.Status,
+                    item.SubmittedAtUtc,
+                    item.UpdatedAtUtc,
+                    item.Response
+                })
+                .ToListAsync();
+
             var export = new
             {
                 ExportedAtUtc = DateTime.UtcNow,
@@ -183,7 +198,8 @@ namespace DIBA_Backend.Controllers
                 },
                 Events = events,
                 Bookings = bookings,
-                Notifications = notifications
+                Notifications = notifications,
+                PrivacyRequests = privacyRequests
             };
 
             return Ok(export);
