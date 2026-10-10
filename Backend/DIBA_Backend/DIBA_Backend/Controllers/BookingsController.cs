@@ -24,10 +24,27 @@ namespace DIBA_Backend.Controllers
         private readonly YocoPaymentService _yocoPaymentService;
 
         // DIBA policy: bookings must be made at least seven calendar days
-        // before the event date. South Africa currently uses UTC+2 year-round.
+        // before the event date, using South African local calendar time.
+        private static TimeZoneInfo GetSouthAfricaTimeZone()
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById("Africa/Johannesburg");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            }
+        }
+
+        private static DateTime GetSouthAfricaLocalNow()
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, GetSouthAfricaTimeZone());
+        }
+
         private static DateTime GetEarliestAllowedBookingDate()
         {
-            return DateTime.UtcNow.AddHours(2).Date.AddDays(7);
+            return GetSouthAfricaLocalNow().Date.AddDays(7);
         }
 
         private static bool IsWithinMinimumNoticePeriod(DateTime eventStart)
@@ -1128,12 +1145,12 @@ namespace DIBA_Backend.Controllers
             if (payment != null &&
                 string.Equals(payment.PaymentStatus, "Succeeded", StringComparison.OrdinalIgnoreCase))
             {
-                var nowSouthAfrica = DateTime.UtcNow.AddHours(2);
+                var nowSouthAfrica = GetSouthAfricaLocalNow();
                 var hoursUntilEvent = (booking.StartDateTime - nowSouthAfrica).TotalHours;
 
-                // DIBA-initiated cancellations receive a full refund.
-                // Organiser cancellations follow the proposed notice policy:
-                // 168+ hours = 100%; 72-167.99 hours = 50%; under 72 hours = 0%.
+                // Approved DIBA policy: DIBA-initiated cancellations receive a full refund.
+                // Organiser cancellations: 168+ hours = 100%; 72-167.99 hours = 50%;
+                // under 72 hours = 0%. Event times are interpreted as South African local time.
                 if (isStaffOrAdministrator)
                 {
                     refundAmount = payment.Amount;
@@ -1155,7 +1172,7 @@ namespace DIBA_Backend.Controllers
                 else
                 {
                     refundAmount = 0m;
-                    refundReason = "Organiser cancellation less than 72 hours before the event: no refund under the proposed policy.";
+                    refundReason = "Organiser cancellation less than 72 hours before the event: no refund under the approved cancellation policy.";
                 }
 
                 payment.RefundAmount = refundAmount;
