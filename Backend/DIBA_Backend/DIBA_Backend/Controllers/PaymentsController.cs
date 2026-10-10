@@ -27,13 +27,19 @@ namespace DIBA_Backend.Controllers
     {
         private readonly DIBABookingsDbContext dbContext;
         private readonly YocoPaymentService yocoPaymentService;
+        private readonly NotificationEmailService notificationEmailService;
+        private readonly ILogger<PaymentsController> logger;
 
         public PaymentsController(
             DIBABookingsDbContext dbContext,
-            YocoPaymentService yocoPaymentService)
+            YocoPaymentService yocoPaymentService,
+            NotificationEmailService notificationEmailService,
+            ILogger<PaymentsController> logger)
         {
             this.dbContext = dbContext;
             this.yocoPaymentService = yocoPaymentService;
+            this.notificationEmailService = notificationEmailService;
+            this.logger = logger;
         }
 
         // GET: api/Payments
@@ -252,8 +258,9 @@ namespace DIBA_Backend.Controllers
             // DIBA adaptation: each booking is restricted to one
             // payment record.
             var existingPayment = await dbContext.Payments
-                .FirstOrDefaultAsync(
-                    p => p.BookingId == createPaymentDto.BookingId);
+                .FirstOrDefaultAsync(p =>
+                    p.BookingId == createPaymentDto.BookingId &&
+                    p.PaymentStatus != "Failed");
 
             if (existingPayment != null)
             {
@@ -263,7 +270,7 @@ namespace DIBA_Backend.Controllers
 
             // Generate DIBA payment reference.
             var referenceNumber =
-                $"DIBA-{DateTime.UtcNow:yyyyMMddHHmmss}";
+                $"DIBA-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}";
 
             YocoCheckoutResponse? checkout;
 
@@ -275,13 +282,12 @@ namespace DIBA_Backend.Controllers
             }
             catch (Exception ex)
             {
+                logger.LogError(ex, "Yoco checkout creation failed for booking {BookingId}.",
+                    createPaymentDto.BookingId);
+
                 return StatusCode(
                     502,
-                    new
-                    {
-                        message = "Unable to create Yoco checkout.",
-                        error = ex.Message
-                    });
+                    new { message = "Unable to create Yoco checkout. Please try again later." });
             }
 
             if (checkout == null ||
@@ -309,7 +315,27 @@ namespace DIBA_Backend.Controllers
 
             dbContext.Payments.Add(payment);
 
-            await dbContext.SaveChangesAsync();
+            try
+            {
+                await dbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateException exception)
+            {
+                var anotherActivePaymentExists = await dbContext.Payments
+                    .AsNoTracking()
+                    .AnyAsync(existing =>
+                        existing.BookingId == payment.BookingId &&
+                        existing.PaymentStatus != "Failed");
+
+                if (anotherActivePaymentExists)
+                {
+                    return Conflict("A pending or successful payment already exists for this booking.");
+                }
+
+                logger.LogError(exception, "Could not save payment record for booking {BookingId}.",
+                    payment.BookingId);
+                return StatusCode(500, "The payment record could not be saved. Contact DIBA staff before retrying.");
+            }
 
             return Ok(new
             {
@@ -527,6 +553,7 @@ namespace DIBA_Backend.Controllers
                 }
 
                 var payment = await dbContext.Payments
+                    .Include(p => p.Booking)
                     .FirstOrDefaultAsync(p => p.ReferenceNumber == referenceNumber);
 
                 if (payment == null)
@@ -534,6 +561,9 @@ namespace DIBA_Backend.Controllers
                     // A 5xx response allows a not-yet-correlated event to be retried.
                     return StatusCode(500, "Payment record for this Yoco reference was not found.");
                 }
+
+                Notification? notificationToEmail = null;
+                var previousPaymentStatus = payment.PaymentStatus;
 
                 if (eventType is "payment.succeeded" or "payment.failed")
                 {
@@ -554,6 +584,34 @@ namespace DIBA_Backend.Controllers
                     else if (string.Equals(payment.PaymentStatus, "Pending", StringComparison.OrdinalIgnoreCase))
                     {
                         payment.PaymentStatus = "Failed";
+                    }
+
+                    if (!string.Equals(previousPaymentStatus, payment.PaymentStatus, StringComparison.OrdinalIgnoreCase) &&
+                        payment.Booking != null)
+                    {
+                        var message = string.Equals(payment.PaymentStatus, "Succeeded", StringComparison.OrdinalIgnoreCase)
+                            ? "Yoco confirmed that your booking payment was successful."
+                            : "Yoco reported that your booking payment failed. You may try again once the failed attempt is recorded.";
+
+                        var alreadyNotified = await dbContext.Notifications.AnyAsync(n =>
+                            n.BookingId == payment.BookingId &&
+                            n.NotificationType == "Payment Status" &&
+                            n.Message == message);
+
+                        if (!alreadyNotified)
+                        {
+                            notificationToEmail = new Notification
+                            {
+                                NotificationId = Guid.NewGuid(),
+                                NotificationType = "Payment Status",
+                                Message = message,
+                                DateCreated = DateTime.UtcNow,
+                                IsRead = false,
+                                UserId = payment.Booking.UserId,
+                                BookingId = payment.BookingId
+                            };
+                            dbContext.Notifications.Add(notificationToEmail);
+                        }
                     }
                 }
                 else
@@ -610,6 +668,7 @@ namespace DIBA_Backend.Controllers
 
                     if (cancellationNotification != null)
                     {
+                        var previousMessage = cancellationNotification.Message;
                         if (string.Equals(
                             payment.RefundStatus, "Succeeded", StringComparison.OrdinalIgnoreCase))
                         {
@@ -621,6 +680,11 @@ namespace DIBA_Backend.Controllers
                         {
                             cancellationNotification.Message =
                                 $"Your venue booking was cancelled, but Yoco could not complete the refund of R{payment.RefundAmount ?? 0m:F2}. DIBA staff must review the refund.";
+                        }
+
+                        if (!string.Equals(previousMessage, cancellationNotification.Message, StringComparison.Ordinal))
+                        {
+                            notificationToEmail = cancellationNotification;
                         }
                     }
                 }
@@ -636,6 +700,16 @@ namespace DIBA_Backend.Controllers
                 });
 
                 await dbContext.SaveChangesAsync();
+
+                if (notificationToEmail != null)
+                {
+                    await notificationEmailService.TrySendAsync(
+                        notificationToEmail.UserId,
+                        notificationToEmail.NotificationId,
+                        notificationToEmail.NotificationType,
+                        notificationToEmail.Message);
+                }
+
                 return Ok(new { received = true });
             }
             catch (JsonException)
