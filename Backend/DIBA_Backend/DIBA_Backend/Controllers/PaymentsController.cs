@@ -324,6 +324,128 @@ namespace DIBA_Backend.Controllers
             });
         }
 
+        // POST: api/Payments/{id}/refund/retry
+        // Only staff/administrators may retry a refund that Yoco explicitly marked failed.
+        // NeedsReview is deliberately excluded because the original request may have succeeded
+        // even if DIBA did not receive its response.
+        [HttpPost("{id:guid}/refund/retry")]
+        [Authorize(Roles = "Staff,Administrator")]
+        public async Task<IActionResult> RetryFailedRefund(Guid id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null ||
+                !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized("User ID could not be determined.");
+            }
+
+            var payment = await dbContext.Payments
+                .FirstOrDefaultAsync(p => p.PaymentId == id);
+
+            if (payment == null)
+            {
+                return NotFound("Payment not found.");
+            }
+
+            if (!string.Equals(payment.PaymentStatus, "Succeeded", StringComparison.OrdinalIgnoreCase) ||
+                payment.RefundAmount is null or <= 0 ||
+                !string.Equals(payment.RefundStatus, "Failed", StringComparison.OrdinalIgnoreCase))
+            {
+                return Conflict(
+                    "Only a refund confirmed as failed by Yoco can be retried. Refunds marked NeedsReview must be reconciled with Yoco first.");
+            }
+
+            if (string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
+            {
+                return BadRequest("The payment has no stored Yoco checkout ID.");
+            }
+
+            payment.RefundStatus = "Pending";
+            payment.RefundRequestKey = $"diba-refund-{Guid.NewGuid():N}";
+            payment.RefundRequestedAtUtc = DateTime.UtcNow;
+            payment.RefundProcessedAtUtc = null;
+            payment.RefundFailureReason = null;
+
+            dbContext.AuditLogs.Add(new AuditLog
+            {
+                AuditLogId = Guid.NewGuid(),
+                Action = "Refund Retry Requested",
+                LogDescription =
+                    $"Staff/admin user {userId} retried refund for payment {payment.PaymentId}. " +
+                    $"Amount: {payment.RefundAmount.Value:F2} ZAR.",
+                Timestamp = DateTime.UtcNow,
+                UserId = userId
+            });
+
+            await dbContext.SaveChangesAsync();
+
+            try
+            {
+                var refund = await yocoPaymentService.RefundCheckoutAsync(
+                    payment.YocoCheckoutId,
+                    payment.RefundAmount.Value,
+                    payment.ReferenceNumber ?? payment.PaymentId.ToString(),
+                    payment.RefundRequestKey);
+
+                payment.YocoRefundId = refund?.RefundId ?? payment.YocoRefundId;
+
+                if (string.Equals(refund?.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
+                {
+                    payment.RefundStatus = "Succeeded";
+                    payment.RefundProcessedAtUtc = DateTime.UtcNow;
+                }
+                else if (string.Equals(refund?.Status, "pending", StringComparison.OrdinalIgnoreCase))
+                {
+                    payment.RefundStatus = "Pending";
+                }
+                else
+                {
+                    payment.RefundStatus = "NeedsReview";
+                    payment.RefundFailureReason =
+                        "Yoco returned an unrecognised refund status. Reconcile with Yoco before retrying.";
+                }
+            }
+            catch (Exception)
+            {
+                // A timeout does not prove the refund failed. Reconcile with Yoco before retrying again.
+                payment.RefundStatus = "NeedsReview";
+                payment.RefundFailureReason =
+                    "The retry outcome could not be confirmed. Reconcile with Yoco before submitting another request.";
+            }
+
+            var notification = await dbContext.Notifications
+                .Where(n =>
+                    n.BookingId == payment.BookingId &&
+                    n.NotificationType == "Booking Cancelled")
+                .OrderByDescending(n => n.DateCreated)
+                .FirstOrDefaultAsync();
+
+            if (notification != null)
+            {
+                notification.Message = string.Equals(
+                    payment.RefundStatus, "Succeeded", StringComparison.OrdinalIgnoreCase)
+                    ? $"Your venue booking was cancelled. Yoco confirmed your refund of R{payment.RefundAmount.Value:F2}. Your bank may take additional time to show the funds."
+                    : string.Equals(payment.RefundStatus, "Pending", StringComparison.OrdinalIgnoreCase)
+                        ? $"Your venue booking was cancelled. Your refund of R{payment.RefundAmount.Value:F2} is being processed."
+                        : $"Your venue booking was cancelled, but the refund of R{payment.RefundAmount.Value:F2} needs staff review.";
+            }
+
+            await dbContext.SaveChangesAsync();
+
+            return Ok(new
+            {
+                paymentId = payment.PaymentId,
+                refundAmount = payment.RefundAmount,
+                refundStatus = payment.RefundStatus,
+                yocoRefundId = payment.YocoRefundId,
+                message = payment.RefundStatus == "Succeeded"
+                    ? "Yoco confirmed the refund."
+                    : payment.RefundStatus == "Pending"
+                        ? "The refund is being processed."
+                        : "The refund needs staff review before any further retry."
+            });
+        }
+
         // POST: api/Payments/yoco/webhook
         // Yoco calls this public endpoint after a payment status changes.
         // A webhook is trusted only after its signature and timestamp are verified.
