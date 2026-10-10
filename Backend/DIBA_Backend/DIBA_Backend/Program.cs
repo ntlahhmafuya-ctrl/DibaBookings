@@ -9,13 +9,39 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient<YocoPaymentService>();
+builder.Services.AddScoped<NotificationEmailService>();
+builder.Services.AddProblemDetails();
+builder.Services.AddHealthChecks();
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key must be configured as a secret containing at least 32 UTF-8 bytes.");
+}
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+if (string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
+{
+    throw new InvalidOperationException("Jwt:Issuer and Jwt:Audience must be configured.");
+}
+
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("MyPolicy", builder =>
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader());
+    options.AddPolicy("MyPolicy", policy =>
+    {
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+    });
 });
 
 builder.Services.AddControllers();
@@ -103,18 +129,10 @@ builder.Services.AddAuthentication(
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
 
-                ValidIssuer =
-                    builder.Configuration["Jwt:Issuer"],
-
-                ValidAudience =
-                    builder.Configuration["Jwt:Audience"],
-
-                IssuerSigningKey =
-                    new SymmetricSecurityKey(
-               Encoding.UTF8.GetBytes(
-    builder.Configuration["Jwt:Key"]
-        ?? throw new InvalidOperationException(
-            "JWT signing key is missing from configuration.")))
+                ValidIssuer = jwtIssuer,
+                ValidAudience = jwtAudience,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtKey!))
             };
     });
 
@@ -129,17 +147,17 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// Return safe ProblemDetails responses instead of exposing exception details.
+app.UseExceptionHandler();
 
-// DIBA-specific database initialization.
-// The application creates a service scope and obtains the database
-// context before seeding the required initial roles/statuses/test data.
-using (var scope = app.Services.CreateScope())
+
+// Demo accounts and sample records must only be created in Development.
+// Production migrations are applied explicitly during deployment.
+if (app.Environment.IsDevelopment())
 {
-    var dbContext =
-        scope.ServiceProvider
-            .GetRequiredService<DIBABookingsDbContext>();
-
-    //await DbSeeder.SeedAsync(dbContext);
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<DIBABookingsDbContext>();
+    await DbSeeder.SeedAsync(dbContext);
 }
 
 app.UseCors("MyPolicy");
@@ -170,5 +188,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
