@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 
@@ -9,6 +9,52 @@ import api from "../services/api";
 function PrivacyPolicy() {
     const [exporting, setExporting] = useState(false);
     const [exportMessage, setExportMessage] = useState("");
+    const [privacyRequests, setPrivacyRequests] = useState([]);
+    const [requestType, setRequestType] = useState("Access");
+    const [requestDescription, setRequestDescription] = useState("");
+    const [submittingRequest, setSubmittingRequest] = useState(false);
+    const [requestMessage, setRequestMessage] = useState("");
+
+    // LOAD MY REQUESTS: show the signed-in user's request history only.
+    useEffect(() => {
+        if (!localStorage.getItem("token")) return;
+        api.get("/PrivacyRequests/my")
+            .then((response) => setPrivacyRequests(response.data))
+            .catch(() => {
+                // Keep the privacy notice usable if request history is temporarily unavailable.
+            });
+    }, []);
+
+    // SUBMIT PRIVACY REQUEST: create a tracked request without deleting data automatically.
+    const submitPrivacyRequest = async (event) => {
+        event.preventDefault();
+        if (!localStorage.getItem("token")) {
+            setRequestMessage("Please sign in before submitting a privacy request.");
+            return;
+        }
+
+        const description = requestDescription.trim();
+        if (!description || description.length > 2000) {
+            setRequestMessage("Please explain your request in 1–2000 characters.");
+            return;
+        }
+
+        setSubmittingRequest(true);
+        setRequestMessage("");
+        try {
+            await api.post("/PrivacyRequests", { requestType, description });
+            setRequestDescription("");
+            setRequestMessage("Your request has been submitted. You can track its status below.");
+            const response = await api.get("/PrivacyRequests/my");
+            setPrivacyRequests(response.data);
+        } catch (error) {
+            setRequestMessage(
+                error.response?.data || "We could not submit your request. Please sign in and try again."
+            );
+        } finally {
+            setSubmittingRequest(false);
+        }
+    };
 
     // DATA EXPORT: request the signed-in user's data and download the API response as a JSON file.
     const downloadMyData = async () => {
@@ -213,6 +259,59 @@ function PrivacyPolicy() {
                         <p className="privacy-export-message" role="status">
                             {exportMessage}
                         </p>
+                    )}
+                </section>
+
+
+                <section className="privacy-request-tools">
+                    <h2>Submit or track a privacy request</h2>
+                    <p>
+                        Use this form to ask about your information, request a correction or deletion,
+                        object to certain processing, or raise another privacy concern. Requests are
+                        reviewed by an Administrator. Submitting a deletion request does not immediately
+                        delete your account, bookings, or financial records.
+                    </p>
+                    <form onSubmit={submitPrivacyRequest}>
+                        <label htmlFor="privacyRequestType">Request type</label>
+                        <select id="privacyRequestType" value={requestType}
+                            onChange={(event) => setRequestType(event.target.value)} disabled={submittingRequest}>
+                            <option value="Access">Access my information</option>
+                            <option value="Correction">Correct my information</option>
+                            <option value="Deletion">Request deletion</option>
+                            <option value="Objection">Object to processing</option>
+                            <option value="Other">Other privacy concern</option>
+                        </select>
+
+                        <label htmlFor="privacyRequestDescription">Explain your request</label>
+                        <textarea id="privacyRequestDescription" value={requestDescription}
+                            onChange={(event) => setRequestDescription(event.target.value)}
+                            maxLength={2000} rows={4}
+                            placeholder="Describe what you need. Do not include your password or sign-in token."
+                            required disabled={submittingRequest} />
+                        <p className="privacy-request-hint">{requestDescription.length}/2000 characters</p>
+                        <button type="submit" className="privacy-download-button" disabled={submittingRequest}>
+                            {submittingRequest ? "Submitting…" : "Submit privacy request"}
+                        </button>
+                    </form>
+
+                    {requestMessage && <p className="privacy-export-message" role="status">{requestMessage}</p>}
+
+                    {localStorage.getItem("token") && (
+                        <div className="privacy-request-history">
+                            <h3>My requests</h3>
+                            {privacyRequests.length === 0 ? (
+                                <p>You have not submitted any privacy requests yet.</p>
+                            ) : privacyRequests.map((request) => (
+                                <article className="privacy-request-item" key={request.privacyRequestId}>
+                                    <div className="privacy-request-item-heading">
+                                        <strong>{request.requestType}</strong><span>{request.status}</span>
+                                    </div>
+                                    <p>{request.description}</p>
+                                    <small>Submitted: {new Date(request.submittedAtUtc).toLocaleString()}</small>
+                                    {request.response && <p className="privacy-request-response"><strong>Response:</strong> {request.response}</p>}
+                                </article>
+                            ))}
+                        </div>
                     )}
                 </section>
 
