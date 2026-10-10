@@ -54,6 +54,7 @@ function errorMessage(error, fallback) {
 function StaffDashboard() {
     const [bookings, setBookings] = useState([]);
     const [venues, setVenues] = useState([]);
+    const [activeScreen, setActiveScreen] = useState("overview");
     const [selectedVenueImage, setSelectedVenueImage] = useState(null);
     const [loading, setLoading] = useState(true);
     const [savingVenue, setSavingVenue] = useState(false);
@@ -290,26 +291,61 @@ function StaffDashboard() {
                 <LoadingIndicator />
             ) : (
                 <>
-                    <section className="stat-grid">
-                        <StatCard
-                            label="Pending review"
-                            value={bookings.filter((booking) => booking.statusName === "Pending").length}
-                            tone="amber"
-                        />
-                        <StatCard
-                            label="Approved"
-                            value={bookings.filter((booking) => booking.statusName === "Approved").length}
-                            tone="green"
-                        />
-                        <StatCard label="Venues" value={venues.length} />
-                        <StatCard
-                            label="Available venues"
-                            value={venues.filter((venue) => venue.venueStatus === "Available").length}
-                            tone="ink"
-                        />
-                    </section>
+                    <nav className="d-flex flex-wrap gap-2 mb-4" aria-label="Staff workspace sections">
+                        <Button
+                            variant={activeScreen === "overview" ? "primary" : "outline-primary"}
+                            onClick={() => setActiveScreen("overview")}
+                        >
+                            Overview
+                        </Button>
+                        <Button
+                            variant={activeScreen === "bookings" ? "primary" : "outline-primary"}
+                            onClick={() => setActiveScreen("bookings")}
+                        >
+                            Booking requests
+                        </Button>
+                        <Button
+                            variant={activeScreen === "venues" ? "primary" : "outline-primary"}
+                            onClick={() => setActiveScreen("venues")}
+                        >
+                            Venue management
+                        </Button>
+                    </nav>
 
-                    <section className="content-grid">
+                    {activeScreen === "overview" && (
+                        <>
+                            <section className="stat-grid">
+                                <StatCard
+                                    label="Pending review"
+                                    value={bookings.filter((booking) => booking.statusName === "Pending").length}
+                                    tone="amber"
+                                />
+                                <StatCard
+                                    label="Approved"
+                                    value={bookings.filter((booking) => booking.statusName === "Approved").length}
+                                    tone="green"
+                                />
+                                <StatCard label="Venues" value={venues.length} />
+                                <StatCard
+                                    label="Available venues"
+                                    value={venues.filter((venue) => venue.venueStatus === "Available").length}
+                                    tone="ink"
+                                />
+                            </section>
+                            <div className="panel mt-4">
+                                <p className="eyebrow">STAFF WORKSPACE</p>
+                                <h2>What would you like to do?</h2>
+                                <p>Choose one area at a time to keep your workspace focused and easy to use.</p>
+                                <div className="d-flex flex-wrap gap-2">
+                                    <Button onClick={() => setActiveScreen("bookings")}>Review booking requests</Button>
+                                    <Button variant="outline-primary" onClick={() => setActiveScreen("venues")}>Manage venues and facilities</Button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {activeScreen === "bookings" && (
+                        <section className="content-grid">
                         <div className="panel table-panel">
                             <div className="panel-heading">
                                 <div>
@@ -369,7 +405,11 @@ function StaffDashboard() {
                                 </tbody>
                             </Table>
                         </div>
+                        </section>
+                    )}
 
+                    {activeScreen === "venues" && (
+                        <section className="content-grid">
                         <div className="panel">
                             <div className="panel-heading">
                                 <div>
@@ -425,7 +465,9 @@ function StaffDashboard() {
                                 </div>
                             ))}
                         </div>
-                    </section>
+                        </section>
+                    )}
+
                 </>
             )}
 
