@@ -1,14 +1,10 @@
 using System;
-using DIBA_Backend.Data;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace DIBA_Backend.Migrations
 {
-    [DbContext(typeof(DIBABookingsDbContext))]
-    [Migration("20261010120000_AddPaymentRefundTracking")]
     public partial class AddPaymentRefundTracking : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
