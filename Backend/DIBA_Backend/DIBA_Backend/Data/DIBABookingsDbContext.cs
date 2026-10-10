@@ -441,6 +441,10 @@ namespace DIBA_Backend.Data
                 .Property(p => p.Amount)
                 .HasPrecision(18, 2);
 
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.RefundAmount)
+                .HasPrecision(18, 2);
+
 
             // =========================================================
             // USER → NOTIFICATION
