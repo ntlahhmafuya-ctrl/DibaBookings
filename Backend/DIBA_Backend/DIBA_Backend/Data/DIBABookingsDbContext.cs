@@ -47,6 +47,7 @@ namespace DIBA_Backend.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<PrivacyRequest> PrivacyRequests { get; set; }
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<ProcessedYocoWebhook> ProcessedYocoWebhooks { get; set; }
         public DbSet<Venue> Venues { get; set; }
         public DbSet<VenueFeature> VenueFeatures { get; set; }
 
@@ -526,6 +527,24 @@ namespace DIBA_Backend.Data
 
             modelBuilder.Entity<PrivacyRequest>()
                 .HasIndex(request => new { request.UserId, request.SubmittedAtUtc });
+
+            // =========================================================
+            // PROCESSED YOCO WEBHOOKS
+            // The primary key on WebhookId enforces duplicate protection
+            // at the database level, including concurrent deliveries.
+            // =========================================================
+            modelBuilder.Entity<ProcessedYocoWebhook>()
+                .HasKey(e => e.WebhookId);
+
+            modelBuilder.Entity<ProcessedYocoWebhook>()
+                .Property(e => e.WebhookId)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            modelBuilder.Entity<ProcessedYocoWebhook>()
+                .Property(e => e.EventType)
+                .HasMaxLength(100)
+                .IsRequired();
 
             // =========================================================
             // SEED ROLES
