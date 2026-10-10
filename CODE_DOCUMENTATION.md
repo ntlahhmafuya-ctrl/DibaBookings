@@ -27,8 +27,8 @@ Responsible for:
 
 The page does not send a user ID. The backend identifies the current user from the authenticated request.
 
-### Privacy notice and personal-data export — `diba-bookings-frontend/src/pages/PrivacyPolicy.js`
-Responsible for presenting the initial privacy notice and allowing a signed-in user to request and download their personal-data export as a JSON file. The export endpoint is responsible for deciding which records belong to the authenticated user.
+### Privacy notice, personal-data export, and privacy requests — `diba-bookings-frontend/src/pages/PrivacyPolicy.js`
+Responsible for presenting the initial privacy notice, allowing a signed-in user to download their personal-data export as JSON, submitting privacy requests, and displaying the signed-in user's request history and any recorded response. The backend derives account ownership from the authentication token.
 
 ### Dashboard shell — `diba-bookings-frontend/src/components/common/DashboardShell.js`
 Responsible for the shared header, profile shortcut, sign-out button, and content area used by the staff and administrator dashboards.
@@ -67,3 +67,19 @@ Defines the fields accepted for a profile update. It intentionally excludes the 
 4. Explain *why* a security or business rule exists; avoid comments that merely repeat the code.
 5. Update this file when a new major feature or responsibility is added.
 6. Do not describe a feature as tested unless it has actually been run and verified.
+
+
+### Privacy request API — `Backend/DIBA_Backend/DIBA_Backend/Controllers/PrivacyRequestsController.cs`
+Responsible for creating privacy requests for the authenticated user, returning only that user's request history, listing requests for Administrators, and recording administrator status updates and responses. The workflow records requests but does not automatically delete accounts, bookings, or financial records.
+
+### Privacy request data model — `Backend/DIBA_Backend/DIBA_Backend/Models/Entities/PrivacyRequest.cs`
+Defines the stored request type, description, status, timestamps, requester, administrator response, and reviewer ID. The requester relationship restricts account deletion from silently removing request history.
+
+### Privacy request DTOs — `Backend/DIBA_Backend/DIBA_Backend/Dto/PrivacyRequests/`
+`CreatePrivacyRequestDto` accepts only request type and description; the API gets the user ID from the token. `UpdatePrivacyRequestDto` accepts the administrator's new status and optional response.
+
+### Privacy request database setup — `Backend/DIBA_Backend/DatabaseScripts/CreatePrivacyRequests.sql`
+Creates the SQL Server table and indexes required for privacy request tracking. Run this once against the correct DIBA Bookings database before testing the feature. The application currently does not automatically apply this script.
+
+### Administrator privacy queue — `diba-bookings-frontend/src/components/admin/AdminSectionNavigation.js`, `AdminDashboard.js`, `AdminRecordsPanel.js`, and `services/adminService.js`
+Responsible for showing the privacy request section to Administrators, loading the request queue, and allowing an Administrator to update status and record a response.
