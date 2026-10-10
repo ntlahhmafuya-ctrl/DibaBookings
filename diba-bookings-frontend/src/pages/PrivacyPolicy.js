@@ -2,10 +2,15 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 
+/**
+ * PRIVACY NOTICE PAGE
+ * Responsibility: explain personal-information practices and provide self-service data export.
+ */
 function PrivacyPolicy() {
     const [exporting, setExporting] = useState(false);
     const [exportMessage, setExportMessage] = useState("");
 
+    // DATA EXPORT: request the signed-in user's data and download the API response as a JSON file.
     const downloadMyData = async () => {
         if (!localStorage.getItem("token")) {
             setExportMessage("Please sign in first, then return to this page to download your data.");
