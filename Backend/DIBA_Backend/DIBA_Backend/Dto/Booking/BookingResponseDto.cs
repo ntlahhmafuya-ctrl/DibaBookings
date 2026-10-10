@@ -30,8 +30,22 @@
 
         public string OrganiserName { get; set; } = string.Empty;
 
+        public string OrganiserEmail { get; set; } = string.Empty;
+
         public string EventName { get; set; } = string.Empty;
 
+        public string EventDescription { get; set; } = string.Empty;
+
+        public string? EventType { get; set; }
+
+        public string? EventAttendance { get; set; }
+
         public string VenueName { get; set; } = string.Empty;
+
+        public string VenueLocation { get; set; } = string.Empty;
+
+        public int VenueCapacity { get; set; }
+
+        public decimal VenuePrice { get; set; }
     }
 }
