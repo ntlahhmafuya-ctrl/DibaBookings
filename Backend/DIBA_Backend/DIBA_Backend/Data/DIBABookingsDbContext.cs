@@ -146,6 +146,19 @@ namespace DIBA_Backend.Data
 
 
             // =========================================================
+            // USER → PRIVACY REQUEST
+            // One user can submit multiple privacy requests.
+            // Restrict prevents request history being silently removed
+            // if account deletion is considered in the future.
+            // =========================================================
+            modelBuilder.Entity<PrivacyRequest>()
+                .HasOne(request => request.User)
+                .WithMany()
+                .HasForeignKey(request => request.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+            // =========================================================
             // USER → BOOKING
             // One User can create many Bookings
             // =========================================================
