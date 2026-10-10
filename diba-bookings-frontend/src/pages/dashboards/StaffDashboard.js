@@ -381,6 +381,13 @@ function StaffDashboard() {
                                 <p>No venues have been added yet. Select “Add venue” to create the first one.</p>
                             ) : venues.map((venue) => (
                                 <div className="compact-row" key={venue.venueId}>
+                                    {venue.venueImageData && (
+                                        <img
+                                            src={venue.venueImageData}
+                                            alt={venue.venueName}
+                                            style={{ width: "112px", height: "78px", objectFit: "cover", borderRadius: "8px", flexShrink: 0 }}
+                                        />
+                                    )}
                                     <div className="flex-grow-1">
                                         <strong>{venue.venueName}</strong>
                                         <p>{venue.location} / capacity {venue.capacity}</p>
