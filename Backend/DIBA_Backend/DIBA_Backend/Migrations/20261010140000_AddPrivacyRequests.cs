@@ -1,6 +1,4 @@
 using System;
-using DIBA_Backend.Data;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,41 +9,34 @@ namespace DIBA_Backend.Migrations
     /// Creates the table used to track user privacy requests and administrator responses.
     /// It stores requests only; it does not delete user, booking, or payment records.
     /// </summary>
-    [DbContext(typeof(DIBABookingsDbContext))]
-    [Migration("20261010140000_AddPrivacyRequests")]
     public partial class AddPrivacyRequests : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "PrivacyRequests",
-                columns: table => new
-                {
-                    PrivacyRequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    RequestType = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    SubmittedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Response = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReviewedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PrivacyRequests", x => x.PrivacyRequestId);
-                    table.ForeignKey(
-                        name: "FK_PrivacyRequests_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "UserId",
-                        onDelete: ReferentialAction.Restrict);
-                });
+            // The repository also includes a guarded SQL setup script that may have
+            // been run manually. Only create the table when it does not already exist.
+            migrationBuilder.Sql(@"
+IF OBJECT_ID(N'dbo.PrivacyRequests', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.PrivacyRequests
+    (
+        PrivacyRequestId UNIQUEIDENTIFIER NOT NULL
+            CONSTRAINT PK_PrivacyRequests PRIMARY KEY,
+        UserId UNIQUEIDENTIFIER NOT NULL,
+        RequestType NVARCHAR(MAX) NOT NULL,
+        Description NVARCHAR(MAX) NOT NULL,
+        Status NVARCHAR(MAX) NOT NULL,
+        SubmittedAtUtc DATETIME2 NOT NULL,
+        UpdatedAtUtc DATETIME2 NOT NULL,
+        Response NVARCHAR(MAX) NULL,
+        ReviewedByUserId UNIQUEIDENTIFIER NULL,
+        CONSTRAINT FK_PrivacyRequests_Users_UserId
+            FOREIGN KEY (UserId) REFERENCES dbo.Users(UserId) ON DELETE NO ACTION
+    );
 
-            migrationBuilder.CreateIndex(
-                name: "IX_PrivacyRequests_UserId",
-                table: "PrivacyRequests",
-                column: "UserId");
+    CREATE INDEX IX_PrivacyRequests_UserId
+        ON dbo.PrivacyRequests(UserId);
+END;");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
