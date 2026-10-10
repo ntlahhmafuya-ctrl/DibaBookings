@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <UserSecretsId>DIBA-Bookings-Local-Development</UserSecretsId>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
