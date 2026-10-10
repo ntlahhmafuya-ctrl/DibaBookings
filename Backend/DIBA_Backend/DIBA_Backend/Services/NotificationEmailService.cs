@@ -70,7 +70,7 @@ namespace DIBA_Backend.Services
                     EnableSsl = enableSsl,
                     UseDefaultCredentials = false,
                     Credentials = string.IsNullOrWhiteSpace(username)
-                        ? CredentialCache.DefaultNetworkCredentials
+                        ? null
                         : new NetworkCredential(username, password)
                 };
 
