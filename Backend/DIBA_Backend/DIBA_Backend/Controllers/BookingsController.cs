@@ -150,16 +150,17 @@ namespace DIBA_Backend.Controllers
                               " " +
                               booking.User.LastName
                             : string.Empty,
+                    OrganiserEmail = booking.User != null ? booking.User.Email : string.Empty,
 
-                    EventName =
-                        booking.Event != null
-                            ? booking.Event.EventName
-                            : string.Empty,
+                    EventName = booking.Event != null ? booking.Event.EventName : string.Empty,
+                    EventDescription = booking.Event != null ? booking.Event.EventDescription : string.Empty,
+                    EventType = booking.Event != null ? booking.Event.EventType : null,
+                    EventAttendance = booking.Event != null ? booking.Event.EventAttendance : null,
 
-                    VenueName =
-                        booking.Venue != null
-                            ? booking.Venue.VenueName
-                            : string.Empty
+                    VenueName = booking.Venue != null ? booking.Venue.VenueName : string.Empty,
+                    VenueLocation = booking.Venue != null ? booking.Venue.Location : string.Empty,
+                    VenueCapacity = booking.Venue != null ? booking.Venue.Capacity : 0,
+                    VenuePrice = booking.Venue != null ? booking.Venue.Price : 0m
                 })
                 .ToListAsync();
 
@@ -250,14 +251,17 @@ namespace DIBA_Backend.Controllers
                         : booking.User.FirstName +
                           " " +
                           booking.User.LastName,
+                OrganiserEmail = booking.User?.Email ?? string.Empty,
 
-                EventName =
-                    booking.Event?.EventName ??
-                    string.Empty,
+                EventName = booking.Event?.EventName ?? string.Empty,
+                EventDescription = booking.Event?.EventDescription ?? string.Empty,
+                EventType = booking.Event?.EventType,
+                EventAttendance = booking.Event?.EventAttendance,
 
-                VenueName =
-                    booking.Venue?.VenueName ??
-                    string.Empty
+                VenueName = booking.Venue?.VenueName ?? string.Empty,
+                VenueLocation = booking.Venue?.Location ?? string.Empty,
+                VenueCapacity = booking.Venue?.Capacity ?? 0,
+                VenuePrice = booking.Venue?.Price ?? 0m
             };
 
             return Ok(response);
