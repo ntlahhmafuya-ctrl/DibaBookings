@@ -21,6 +21,18 @@ namespace DIBA_Backend.Controllers
     {
         private readonly DIBABookingsDbContext _dbContext;
 
+        // DIBA policy: bookings must be made at least seven calendar days
+        // before the event date. South Africa currently uses UTC+2 year-round.
+        private static DateTime GetEarliestAllowedBookingDate()
+        {
+            return DateTime.UtcNow.AddHours(2).Date.AddDays(7);
+        }
+
+        private static bool IsWithinMinimumNoticePeriod(DateTime eventStart)
+        {
+            return eventStart.Date < GetEarliestAllowedBookingDate();
+        }
+
         public BookingsController(DIBABookingsDbContext dbContext)
         {
             _dbContext = dbContext;
@@ -252,6 +264,14 @@ namespace DIBA_Backend.Controllers
                     "End date and time must be after the start date and time.");
             }
 
+            if (IsWithinMinimumNoticePeriod(startDateTime))
+            {
+                return Ok(new
+                {
+                    available = false,
+                    reason = "Bookings must be made at least 7 calendar days before the event date."
+                });
+            }
 
             // DIBA-specific existence check.
             var venue = await _dbContext.Venues
@@ -375,6 +395,11 @@ namespace DIBA_Backend.Controllers
                     "End date and time must be after the start date and time.");
             }
 
+            if (IsWithinMinimumNoticePeriod(createBookingDto.StartDateTime))
+            {
+                return BadRequest(
+                    "Bookings must be made at least 7 calendar days before the event date. Please choose a later date.");
+            }
 
             // DIBA-specific existence validation.
             var eventEntity = await _dbContext.Events
@@ -608,6 +633,11 @@ namespace DIBA_Backend.Controllers
                     "End date and time must be after the start date and time.");
             }
 
+            if (IsWithinMinimumNoticePeriod(updateBookingDto.StartDateTime))
+            {
+                return BadRequest(
+                    "Bookings must be made at least 7 calendar days before the event date. Please choose a later date.");
+            }
 
             // DIBA-specific event ownership validation.
             var eventEntity = await _dbContext.Events
@@ -804,6 +834,14 @@ namespace DIBA_Backend.Controllers
                     "Only pending bookings can be approved.");
             }
 
+
+            // Do not approve older pending bookings that violate the
+            // minimum-notice policy.
+            if (IsWithinMinimumNoticePeriod(booking.StartDateTime))
+            {
+                return BadRequest(
+                    "This booking cannot be approved because bookings must be made at least 7 calendar days before the event date.");
+            }
 
             // Change the booking status.
             booking.BookingStatusId =
