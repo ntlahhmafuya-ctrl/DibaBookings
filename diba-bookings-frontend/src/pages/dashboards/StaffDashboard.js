@@ -428,6 +428,7 @@ function StaffDashboard() {
                                 <div className="d-flex flex-wrap gap-2">
                                     <Button onClick={() => setActiveScreen("bookings")}>Review booking requests</Button>
                                     <Button variant="outline-primary" onClick={() => setActiveScreen("venues")}>Manage venues and facilities</Button>
+                                    <Button variant="outline-primary" onClick={() => setActiveScreen("payments")}>Review payments and refunds</Button>
                                 </div>
                             </div>
                         </>
