@@ -135,12 +135,17 @@ namespace DIBA_Backend.Controllers
             // DIBA adaptation: email is used as the unique user identifier
             // for registration and administration purposes.
             var email = createManagedUserDto.Email.Trim().ToLowerInvariant();
+            if (System.Text.Encoding.UTF8.GetByteCount(createManagedUserDto.Password) > 72)
+            {
+                return BadRequest("Password must not exceed 72 UTF-8 bytes.");
+            }
+
             var existingUser = await _dbContext.Users
                 .FirstOrDefaultAsync(user => user.Email == email);
 
             if (existingUser != null)
             {
-                return BadRequest("A user with this email already exists.");
+                return Conflict("A user with this email already exists.");
             }
 
             // DIBA-specific role validation:
@@ -178,7 +183,19 @@ namespace DIBA_Backend.Controllers
 
             _dbContext.Users.Add(user);
 
-            await _dbContext.SaveChangesAsync();
+            try
+            {
+                await _dbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                if (await _dbContext.Users.AsNoTracking().AnyAsync(item => item.Email == email))
+                {
+                    return Conflict("A user with this email already exists.");
+                }
+
+                throw;
+            }
 
             return Ok(new
             {
