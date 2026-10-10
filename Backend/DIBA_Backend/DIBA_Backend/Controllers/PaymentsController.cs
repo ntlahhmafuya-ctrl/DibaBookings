@@ -468,6 +468,32 @@ namespace DIBA_Backend.Controllers
                     }
                 }
 
+                if (eventType is "refund.succeeded" or "refund.failed")
+                {
+                    var cancellationNotification = await dbContext.Notifications
+                        .Where(n =>
+                            n.BookingId == payment.BookingId &&
+                            n.NotificationType == "Booking Cancelled")
+                        .OrderByDescending(n => n.DateCreated)
+                        .FirstOrDefaultAsync();
+
+                    if (cancellationNotification != null)
+                    {
+                        if (string.Equals(
+                            payment.RefundStatus, "Succeeded", StringComparison.OrdinalIgnoreCase))
+                        {
+                            cancellationNotification.Message =
+                                $"Your venue booking was cancelled. Yoco confirmed your refund of R{payment.RefundAmount ?? 0m:F2}. Your bank may take additional time to show the funds.";
+                        }
+                        else if (string.Equals(
+                            payment.RefundStatus, "Failed", StringComparison.OrdinalIgnoreCase))
+                        {
+                            cancellationNotification.Message =
+                                $"Your venue booking was cancelled, but Yoco could not complete the refund of R{payment.RefundAmount ?? 0m:F2}. DIBA staff must review the refund.";
+                        }
+                    }
+                }
+
                 await dbContext.SaveChangesAsync();
                 return Ok(new { received = true });
             }
