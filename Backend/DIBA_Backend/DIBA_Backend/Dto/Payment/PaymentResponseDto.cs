@@ -11,5 +11,7 @@
         public string? ReferenceNumber { get; set; }
 
         public Guid BookingId { get; set; }
+
+        public string PaymentStatus { get; set; } = "Pending";
     }
 }
