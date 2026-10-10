@@ -1,31 +1,35 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace DIBA_Backend.Migrations
 {
-    /// <inheritdoc />
+    /// <summary>
+    /// Adds the venue price column when it is not already present.
+    /// This supports databases where the column was added manually before EF recorded this migration.
+    /// </summary>
     public partial class AddVenuePrice : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<decimal>(
-                name: "Price",
-                table: "Venues",
-                type: "decimal(18,2)",
-                precision: 18,
-                scale: 2,
-                nullable: false,
-                defaultValue: 0m);
+            // Avoid a duplicate-column error when Venues.Price already exists.
+            migrationBuilder.Sql(@"
+IF COL_LENGTH(N'dbo.Venues', N'Price') IS NULL
+BEGIN
+    ALTER TABLE [dbo].[Venues] ADD [Price] decimal(18,2) NOT NULL
+        CONSTRAINT [DF_Venues_Price_Migration] DEFAULT (0.0);
+END");
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "Price",
-                table: "Venues");
+            // Review the target database before rolling back: an existing Price column
+            // may predate this migration and may contain data that must be preserved.
+            migrationBuilder.Sql(@"
+IF COL_LENGTH(N'dbo.Venues', N'Price') IS NOT NULL
+BEGIN
+    ALTER TABLE [dbo].[Venues] DROP COLUMN [Price];
+END");
         }
     }
 }
