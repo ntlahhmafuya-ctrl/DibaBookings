@@ -24,3 +24,7 @@ export const approveBooking = (bookingId) =>
 
 export const rejectBooking = (bookingId, reason) =>
     api.put(`/Bookings/${bookingId}/reject`, { reason });
+
+// Staff/admin close-out for an approved booking after its scheduled end time.
+export const completeBooking = (bookingId) =>
+    api.put(`/Bookings/${bookingId}/complete`);
