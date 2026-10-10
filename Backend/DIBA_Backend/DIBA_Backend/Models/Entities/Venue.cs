@@ -20,6 +20,9 @@
 
         public required string VenueStatus { get; set; } = string.Empty;
 
+        // Optional venue photo stored as a data URL in the database.
+        public string? VenueImageData { get; set; }
+
         // Navigation property
         public ICollection<Event> Events { get; set; } = new List<Event>();
 
