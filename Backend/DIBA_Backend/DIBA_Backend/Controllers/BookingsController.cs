@@ -1,6 +1,7 @@
 ﻿using DIBA_Backend.Data;
 using DIBA_Backend.Dto.Booking;
 using DIBA_Backend.Models.Entities;
+using DIBA_Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,7 @@ namespace DIBA_Backend.Controllers
     public class BookingsController : ControllerBase
     {
         private readonly DIBABookingsDbContext _dbContext;
+        private readonly YocoPaymentService _yocoPaymentService;
 
         // DIBA policy: bookings must be made at least seven calendar days
         // before the event date. South Africa currently uses UTC+2 year-round.
@@ -33,9 +35,12 @@ namespace DIBA_Backend.Controllers
             return eventStart.Date < GetEarliestAllowedBookingDate();
         }
 
-        public BookingsController(DIBABookingsDbContext dbContext)
+        public BookingsController(
+            DIBABookingsDbContext dbContext,
+            YocoPaymentService yocoPaymentService)
         {
             _dbContext = dbContext;
+            _yocoPaymentService = yocoPaymentService;
         }
 
 
@@ -1050,156 +1055,226 @@ namespace DIBA_Backend.Controllers
         [HttpPut("{id:guid}/cancel")]
         public async Task<IActionResult> CancelBooking(Guid id)
         {
-
-            // Same claims-based identity retrieval used by the other
-            // booking operations.
-            var userIdClaim =
-                User.FindFirst(ClaimTypes.NameIdentifier);
-
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null)
             {
-                return Unauthorized(
-                    "User ID could not be determined.");
+                return Unauthorized("User ID could not be determined.");
             }
 
-            if (!Guid.TryParse(
-                    userIdClaim.Value,
-                    out Guid userId))
+            if (!Guid.TryParse(userIdClaim.Value, out Guid userId))
             {
                 return Unauthorized("Invalid user ID.");
             }
 
-
             var booking = await _dbContext.Bookings
-                .FirstOrDefaultAsync(
-                    booking =>
-                        booking.BookingId == id);
+                .Include(b => b.Payments)
+                .FirstOrDefaultAsync(b => b.BookingId == id);
 
             if (booking == null)
             {
                 return NotFound("Booking not found.");
             }
 
-
-            // Reference: Microsoft Learn, "Role-based authorization
-            // in ASP.NET Core".
-            // Similar logic: checking whether an authenticated user
-            // belongs to one of the permitted roles.
-            // DIBA adaptation: Staff and Administrators receive broader
-            // cancellation permissions.
             var isStaffOrAdministrator =
-                User.IsInRole("Staff") ||
-                User.IsInRole("Administrator");
+                User.IsInRole("Staff") || User.IsInRole("Administrator");
 
-
-            // DIBA-specific ownership and role rule:
-            // Event Organisers may cancel their own bookings, while
-            // Staff and Administrators may cancel any booking.
-            if (booking.UserId != userId &&
-                !isStaffOrAdministrator)
+            if (booking.UserId != userId && !isStaffOrAdministrator)
             {
                 return Forbid();
             }
 
-
-            // Reference: JedAngelo, "ConferenceBookingApi".
-            // Similar logic: booking status is used to control the
-            // allowed operations on a reservation.
-            var cancelledStatus = await _dbContext.BookingStatuses
-                .FirstOrDefaultAsync(
-                    bookingStatus =>
-                        bookingStatus.StatusName ==
-                        "Cancelled");
-
-            if (cancelledStatus == null)
-            {
-                return StatusCode(
-                    500,
-                    "Cancelled booking status could not be found.");
-            }
-
-
             var currentStatus = await _dbContext.BookingStatuses
-                .FirstOrDefaultAsync(
-                    bookingStatus =>
-                        bookingStatus.BookingStatusId ==
-                        booking.BookingStatusId);
+                .FirstOrDefaultAsync(s => s.BookingStatusId == booking.BookingStatusId);
 
             if (currentStatus == null)
             {
-                return StatusCode(
-                    500,
-                    "Current booking status could not be found.");
+                return StatusCode(500, "Current booking status could not be determined.");
             }
 
-
-            // DIBA-specific state-transition rule:
-            // Rejected, Cancelled and Completed bookings cannot be
-            // cancelled again.
-            if (currentStatus.StatusName.Equals(
-                    "Rejected",
-                    StringComparison.OrdinalIgnoreCase) ||
-
-                currentStatus.StatusName.Equals(
-                    "Cancelled",
-                    StringComparison.OrdinalIgnoreCase) ||
-
-                currentStatus.StatusName.Equals(
-                    "Completed",
-                    StringComparison.OrdinalIgnoreCase))
+            if (currentStatus.StatusName.Equals("Rejected", StringComparison.OrdinalIgnoreCase) ||
+                currentStatus.StatusName.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ||
+                currentStatus.StatusName.Equals("Completed", StringComparison.OrdinalIgnoreCase))
             {
-                return BadRequest(
-                    "This booking cannot be cancelled in its current status.");
+                return BadRequest("This booking cannot be cancelled in its current status.");
             }
 
+            var payment = booking.Payments
+                .OrderByDescending(p => p.PaymentDate)
+                .FirstOrDefault();
 
-            // Change the booking status.
-            booking.BookingStatusId =
-                cancelledStatus.BookingStatusId;
+            // Do not cancel while Yoco is still deciding whether the payment succeeded.
+            // Otherwise a late success could charge a cancelled booking without a refund.
+            if (payment != null &&
+                string.Equals(payment.PaymentStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                return Conflict(
+                    "The payment is still processing. Please wait for Yoco to confirm whether it succeeded before cancelling.");
+            }
 
+            var cancelledStatus = await _dbContext.BookingStatuses
+                .FirstOrDefaultAsync(s => s.StatusName == "Cancelled");
 
-            // DIBA audit logging:
-            // cancellation records which authenticated user performed
-            // the action and when it occurred.
+            if (cancelledStatus == null)
+            {
+                return StatusCode(500, "Cancelled booking status could not be found.");
+            }
+
+            booking.BookingStatusId = cancelledStatus.BookingStatusId;
+
+            var refundStatus = "NotRequired";
+            decimal refundAmount = 0m;
+            var refundReason = "No successful payment was found for this booking.";
+
+            if (payment != null &&
+                string.Equals(payment.PaymentStatus, "Succeeded", StringComparison.OrdinalIgnoreCase))
+            {
+                var nowSouthAfrica = DateTime.UtcNow.AddHours(2);
+                var hoursUntilEvent = (booking.StartDateTime - nowSouthAfrica).TotalHours;
+
+                // DIBA-initiated cancellations receive a full refund.
+                // Organiser cancellations follow the proposed notice policy:
+                // 168+ hours = 100%; 72-167.99 hours = 50%; under 72 hours = 0%.
+                if (isStaffOrAdministrator)
+                {
+                    refundAmount = payment.Amount;
+                    refundReason = "DIBA-initiated cancellation: full refund.";
+                }
+                else if (hoursUntilEvent >= 168)
+                {
+                    refundAmount = payment.Amount;
+                    refundReason = "Organiser cancellation at least 7 days before the event: full refund.";
+                }
+                else if (hoursUntilEvent >= 72)
+                {
+                    refundAmount = Math.Round(
+                        payment.Amount * 0.50m,
+                        2,
+                        MidpointRounding.AwayFromZero);
+                    refundReason = "Organiser cancellation at least 72 hours but less than 7 days before the event: 50% refund.";
+                }
+                else
+                {
+                    refundAmount = 0m;
+                    refundReason = "Organiser cancellation less than 72 hours before the event: no refund under the proposed policy.";
+                }
+
+                payment.RefundAmount = refundAmount;
+                payment.RefundReason = refundReason;
+                payment.RefundRequestedAtUtc = refundAmount > 0 ? DateTime.UtcNow : null;
+                payment.RefundProcessedAtUtc = null;
+                payment.RefundFailureReason = null;
+
+                if (refundAmount <= 0)
+                {
+                    payment.RefundStatus = "NotEligible";
+                    payment.RefundRequestKey = null;
+                    refundStatus = payment.RefundStatus;
+                }
+                else
+                {
+                    payment.RefundStatus = "Pending";
+                    payment.RefundRequestKey = $"diba-refund-{Guid.NewGuid():N}";
+                    refundStatus = payment.RefundStatus;
+                }
+            }
+
             var auditLog = new AuditLog
             {
                 AuditLogId = Guid.NewGuid(),
                 Action = "Booking Cancelled",
                 LogDescription =
-                    $"Booking {booking.BookingId} was cancelled.",
+                    $"Booking {booking.BookingId} was cancelled. " +
+                    $"Refund status: {refundStatus}. " +
+                    $"Refund amount: {refundAmount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)} ZAR. " +
+                    $"Reason: {refundReason}",
                 Timestamp = DateTime.UtcNow,
                 UserId = userId
             };
-
             _dbContext.AuditLogs.Add(auditLog);
 
+            var notificationMessage = refundAmount > 0
+                ? $"Your venue booking has been cancelled. A refund of R{refundAmount:F2} has been requested. Refund status: {refundStatus}. Your bank may take additional time to show the funds after Yoco confirms the refund."
+                : payment != null &&
+                  string.Equals(payment.PaymentStatus, "Succeeded", StringComparison.OrdinalIgnoreCase)
+                    ? $"Your venue booking has been cancelled. No refund is eligible under the current cancellation policy. Reason: {refundReason}"
+                    : "Your venue booking has been cancelled. No refund is due because no successful payment was recorded.";
 
-            // DIBA notification workflow:
-            // the organiser is informed when the booking is cancelled.
-            var notification = new Notification
+            _dbContext.Notifications.Add(new Notification
             {
                 NotificationId = Guid.NewGuid(),
                 NotificationType = "Booking Cancelled",
-                Message =
-                    "Your venue booking has been cancelled.",
+                Message = notificationMessage,
                 DateCreated = DateTime.UtcNow,
                 IsRead = false,
                 UserId = booking.UserId,
                 BookingId = booking.BookingId
-            };
+            });
 
-            _dbContext.Notifications.Add(notification);
-
+            // Persist cancellation and refund intent before contacting Yoco.
+            // This makes duplicate cancellation requests unable to start a second refund.
             await _dbContext.SaveChangesAsync();
+
+            if (payment != null &&
+                refundAmount > 0 &&
+                string.Equals(payment.RefundStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
+                {
+                    payment.RefundStatus = "NeedsReview";
+                    payment.RefundFailureReason =
+                        "The successful payment has no stored Yoco checkout ID.";
+                }
+                else
+                {
+                    try
+                    {
+                        var yocoRefund = await _yocoPaymentService.RefundCheckoutAsync(
+                            payment.YocoCheckoutId,
+                            refundAmount,
+                            payment.ReferenceNumber ?? payment.PaymentId.ToString(),
+                            payment.RefundRequestKey!);
+
+                        payment.YocoRefundId = yocoRefund?.RefundId;
+
+                        if (string.Equals(yocoRefund?.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
+                        {
+                            payment.RefundStatus = "Succeeded";
+                            payment.RefundProcessedAtUtc = DateTime.UtcNow;
+                            payment.RefundFailureReason = null;
+                        }
+                        else if (string.Equals(yocoRefund?.Status, "pending", StringComparison.OrdinalIgnoreCase))
+                        {
+                            payment.RefundStatus = "Pending";
+                        }
+                        else
+                        {
+                            payment.RefundStatus = "NeedsReview";
+                            payment.RefundFailureReason =
+                                "Yoco returned an unrecognised refund status. Check the Yoco dashboard before retrying.";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // The request may have reached Yoco even if the response was lost.
+                        // Do not automatically retry; reconcile with Yoco first to avoid a duplicate refund.
+                        payment.RefundStatus = "NeedsReview";
+                        payment.RefundFailureReason =
+                            $"Yoco refund outcome could not be confirmed. Reconcile with Yoco before retrying. Details: {ex.Message}";
+                    }
+                }
+
+                await _dbContext.SaveChangesAsync();
+                refundStatus = payment.RefundStatus ?? "NeedsReview";
+            }
 
             return Ok(new
             {
-                message =
-                    "Booking cancelled successfully.",
-                bookingId =
-                    booking.BookingId,
-                status =
-                    cancelledStatus.StatusName
+                message = "Booking cancelled successfully.",
+                bookingId = booking.BookingId,
+                status = cancelledStatus.StatusName,
+                refundAmount,
+                refundStatus,
+                refundReason
             });
         }
 
