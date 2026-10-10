@@ -9,6 +9,10 @@ const sectionTitles = {
     privacy: ["DATA RIGHTS", "Privacy requests"]
 };
 
+/**
+ * ADMINISTRATOR RECORDS PANEL
+ * Responsibility: display searchable user and booking records, audit logs, and the privacy-request review queue.
+ */
 function AdminRecordsPanel({
     activeSection,
     query,
@@ -36,7 +40,7 @@ function AdminRecordsPanel({
                 )}
             </div>
 
-            {activeSection !== "audit" && (
+            {activeSection !== "audit" && activeSection !== "privacy" && (
                 <Form.Control
                     className="search"
                     placeholder={`Search ${activeSection}...`}
