@@ -7,12 +7,11 @@
     --organizer-navy: #071b2c;
     --organizer-blue: #1a4b6b;
     --organizer-light-blue: #2c7a9e;
-    --organizer-yellow: #e5b83f;
-    --organizer-paper: #f5f8fa;
-    --organizer-line: #dbe4e9;
-    --organizer-muted: #6d7d88;
+    --organizer-yellow: #f2c84b;
+    --organizer-paper: #f7f8f5;
+    --organizer-muted: #61727d;
+    --organizer-line: #dce4e5;
 }
-
 
 /* =========================================================
    ORGANISER DASHBOARD
@@ -333,10 +332,15 @@
     margin-top: 30px;
 }
 
-.organizer-drawer .nav-item:hover,
-.organizer-drawer .nav-item.active {
-    background: #123b56;
+.organizer-drawer .nav-item:hover {
+    background: rgba(255, 255, 255, 0.08);
     color: #fff;
+}
+
+.organizer-drawer .nav-item.active {
+    background: var(--organizer-blue);
+    color: #fff;
+    box-shadow: inset 3px 0 var(--organizer-yellow);
 }
 
 .organizer-drawer .nav-item.active {
@@ -422,22 +426,18 @@
     line-height: 1.2;
 }
 
-.workspace-search,
-.venue-filters input,
-.venue-filters select,
-.field input,
-.field select,
-.field textarea,
-.workflow-form textarea,
-.workflow-form input,
-.workflow-form select {
-    background: #fff;
-    border: 1px solid var(--organizer-line);
-    border-radius: 10px;
-    color: var(--organizer-navy);
-    font: inherit;
-    padding: 10px 12px;
-    width: 100%;
+.workspace-search:focus,
+.venue-filters input:focus,
+.venue-filters select:focus,
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.workflow-form textarea:focus,
+.workflow-form input:focus,
+.workflow-form select:focus {
+    border-color: var(--organizer-light-blue);
+    box-shadow: 0 0 0 3px rgba(44, 122, 158, 0.10);
+    outline: none;
 }
 
 .workspace-search {
@@ -493,13 +493,13 @@
     border-color: var(--organizer-navy);
 }
 
-.outline-action,
-.link-button,
-.google-maps-button,
-.back-link {
-    background: transparent;
-    border: 1px solid var(--organizer-line);
-    color: var(--organizer-blue);
+.outline-action:hover,
+.link-button:hover,
+.google-maps-button:hover,
+.back-link:hover {
+    background: rgba(44, 122, 158, 0.06);
+    border-color: var(--organizer-light-blue);
+    color: var(--organizer-navy);
 }
 
 .outline-action:hover,
@@ -512,9 +512,15 @@
 
 .danger-button,
 .danger-link {
-    background: rgba(173, 77, 72, 0.08);
-    border: 1px solid rgba(173, 77, 72, 0.2);
-    color: var(--red, #ad4d48);
+    background: rgba(7, 27, 44, 0.05);
+    border: 1px solid rgba(7, 27, 44, 0.14);
+    color: var(--organizer-navy);
+}
+
+.danger-button:hover,
+.danger-link:hover {
+    background: rgba(7, 27, 44, 0.09);
+    border-color: var(--organizer-navy);
 }
 
 .danger-link {
@@ -523,8 +529,8 @@
 }
 
 .disabled-action {
-    background: #e6ebee;
-    border: 1px solid #d3dce2;
+    background: #edf0f0;
+    border: 1px solid var(--organizer-line);
     border-radius: 10px;
     color: var(--organizer-muted);
     cursor: not-allowed;
@@ -617,6 +623,17 @@
     padding: 8px 12px;
 }
 
+.record-actions button:hover {
+    background: rgba(44, 122, 158, 0.06);
+    border-color: var(--organizer-light-blue);
+    color: var(--organizer-navy);
+}
+
+/* =========================================================
+   STATUS BADGES
+   DIBA landing-page colour system
+   ========================================================= */
+
 .status-pill {
     align-items: center;
     border-radius: 999px;
@@ -628,6 +645,8 @@
     white-space: nowrap;
 }
 
+/* Small status dots used elsewhere */
+
 .status-dot {
     border-radius: 50%;
     display: inline-block;
@@ -635,36 +654,58 @@
     width: 10px;
 }
 
+
+/* Pending */
+
 .status-pill.pending,
-.status-dot.pending,
-.status-pill.no-booking,
-.status-dot.no-booking {
-    background: rgba(189, 118, 37, 0.12);
-    color: #92612a;
+.status-dot.pending {
+    background: rgba(242, 200, 75, 0.18);
+    color: #071b2c;
 }
+
+
+/* Approved */
 
 .status-pill.approved,
 .status-dot.approved {
-    background: rgba(50, 116, 91, 0.12);
-    color: #2f6d52;
+    background: rgba(44, 122, 158, 0.14);
+    color: #1a4b6b;
 }
+
+
+/* Rejected */
 
 .status-pill.rejected,
 .status-dot.rejected {
-    background: rgba(173, 77, 72, 0.12);
-    color: var(--red, #ad4d48);
+    background: rgba(7, 27, 44, 0.08);
+    color: #071b2c;
 }
+
+
+/* Cancelled */
 
 .status-pill.cancelled,
 .status-dot.cancelled {
-    background: rgba(109, 125, 136, 0.12);
-    color: #59656d;
+    background: rgba(97, 114, 125, 0.12);
+    color: #61727d;
 }
+
+
+/* Completed */
 
 .status-pill.completed,
 .status-dot.completed {
-    background: rgba(23, 92, 114, 0.12);
-    color: var(--blue, #175c72);
+    background: rgba(26, 75, 107, 0.14);
+    color: #1a4b6b;
+}
+
+
+/* No booking */
+
+.status-pill.no-booking,
+.status-dot.no-booking {
+    background: rgba(44, 122, 158, 0.10);
+    color: #2c7a9e;
 }
 
 .notification-row {
@@ -674,16 +715,15 @@
 
 .notification-row.unread {
     border-left: 3px solid var(--organizer-blue);
-    background: #f8fbff;
+    background: rgba(44, 122, 158, 0.05);
 }
-
 .notification-row.read {
     opacity: 0.82;
 }
 
 .notification-bullet {
     align-items: center;
-    background: rgba(26, 75, 107, 0.08);
+    background: rgba(44, 122, 158, 0.10);
     border-radius: 50%;
     color: var(--organizer-blue);
     display: inline-flex;
@@ -750,7 +790,7 @@
     display: block;
     height: 180px;
     object-fit: cover;
-    width: fit-content;
+    width: 100%;
 }
 
 .browse-venue-body {
@@ -883,13 +923,13 @@
 }
 
 .notice {
-    background: rgba(189, 118, 37, 0.04);
-    border-color: rgba(189, 118, 37, 0.2);
+    background: rgba(242, 200, 75, 0.10);
+    border-color: rgba(242, 200, 75, 0.35);
 }
 
 .rejected-notice {
-    background: rgba(173, 77, 72, 0.04);
-    border-color: rgba(173, 77, 72, 0.2);
+    background: rgba(7, 27, 44, 0.05);
+    border-color: rgba(7, 27, 44, 0.16);
 }
 
 .form-grid {
@@ -1131,8 +1171,8 @@
 
 
 .booking-acknowledgement {
-    background: #f8fafc;
-    border: 1px solid #d9e0e6;
+    background: rgba(44, 122, 158, 0.04);
+    border: 1px solid var(--organizer-line);
     border-radius: 8px;
     margin-top: 20px;
     padding: 16px;
