@@ -7,6 +7,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace DIBA_Backend.Controllers
 {
@@ -53,7 +57,8 @@ namespace DIBA_Backend.Controllers
                     Amount = p.Amount,
                     PaymentDate = p.PaymentDate,
                     ReferenceNumber = p.ReferenceNumber,
-                    BookingId = p.BookingId
+                    BookingId = p.BookingId,
+                    PaymentStatus = p.PaymentStatus
                 })
                 .ToListAsync();
 
@@ -125,7 +130,8 @@ namespace DIBA_Backend.Controllers
                 Amount = payment.Amount,
                 PaymentDate = payment.PaymentDate,
                 ReferenceNumber = payment.ReferenceNumber,
-                BookingId = payment.BookingId
+                BookingId = payment.BookingId,
+                PaymentStatus = payment.PaymentStatus
             };
 
             return Ok(response);
@@ -302,6 +308,170 @@ namespace DIBA_Backend.Controllers
                 yocoCheckoutId = payment.YocoCheckoutId,
                 checkoutUrl = checkout.RedirectUrl
             });
+        }
+
+        // POST: api/Payments/yoco/webhook
+        // Yoco calls this public endpoint after a payment status changes.
+        // A webhook is trusted only after its signature and timestamp are verified.
+        [HttpPost("yoco/webhook")]
+        [AllowAnonymous]
+        public async Task<IActionResult> HandleYocoWebhook()
+        {
+            var webhookSecret = HttpContext.RequestServices
+                .GetRequiredService<IConfiguration>()["Yoco:WebhookSecret"];
+
+            if (string.IsNullOrWhiteSpace(webhookSecret) ||
+                webhookSecret.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(503, "Yoco webhook verification is not configured.");
+            }
+
+            var webhookId = Request.Headers["webhook-id"].ToString();
+            var webhookTimestamp = Request.Headers["webhook-timestamp"].ToString();
+            var webhookSignature = Request.Headers["webhook-signature"].ToString();
+
+            if (!IsValidYocoWebhookSignature(
+                    webhookSecret,
+                    webhookId,
+                    webhookTimestamp,
+                    webhookSignature,
+                    Request.Body,
+                    out var rawBody))
+            {
+                return Unauthorized("Invalid Yoco webhook signature.");
+            }
+
+            try
+            {
+                using var document = JsonDocument.Parse(rawBody);
+                var root = document.RootElement;
+
+                var eventType = root.TryGetProperty("type", out var typeElement)
+                    ? typeElement.GetString()
+                    : null;
+
+                if (eventType is not ("payment.succeeded" or "payment.failed"))
+                {
+                    // Acknowledge unrelated event types without changing payment data.
+                    return Ok(new { received = true, ignored = true });
+                }
+
+                if (!root.TryGetProperty("payload", out var payload) ||
+                    !payload.TryGetProperty("amount", out var amountElement) ||
+                    !amountElement.TryGetInt64(out var amountInCents) ||
+                    !payload.TryGetProperty("currency", out var currencyElement) ||
+                    !string.Equals(currencyElement.GetString(), "ZAR", StringComparison.OrdinalIgnoreCase) ||
+                    !payload.TryGetProperty("metadata", out var metadata) ||
+                    !metadata.TryGetProperty("checkoutId", out var checkoutIdElement))
+                {
+                    return BadRequest("Yoco webhook payload is missing required payment details.");
+                }
+
+                var checkoutId = checkoutIdElement.GetString();
+                if (string.IsNullOrWhiteSpace(checkoutId))
+                {
+                    return BadRequest("Yoco checkout ID is missing.");
+                }
+
+                var payment = await dbContext.Payments
+                    .FirstOrDefaultAsync(p => p.YocoCheckoutId == checkoutId);
+
+                if (payment == null)
+                {
+                    // Return a retryable failure so a webhook arriving before
+                    // the local payment record can be delivered again.
+                    return StatusCode(500, "Payment record for this Yoco checkout was not found.");
+                }
+
+                var expectedAmountInCents = (long)Math.Round(
+                    payment.Amount * 100,
+                    MidpointRounding.AwayFromZero);
+
+                if (amountInCents != expectedAmountInCents)
+                {
+                    return BadRequest("Yoco payment amount does not match the recorded booking amount.");
+                }
+
+                // Do not let duplicate or delayed failure events downgrade a successful payment.
+                if (eventType == "payment.succeeded")
+                {
+                    payment.PaymentStatus = "Succeeded";
+                }
+                else if (string.Equals(payment.PaymentStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+                {
+                    payment.PaymentStatus = "Failed";
+                }
+
+                await dbContext.SaveChangesAsync();
+
+                return Ok(new { received = true });
+            }
+            catch (JsonException)
+            {
+                return BadRequest("Yoco webhook body is not valid JSON.");
+            }
+        }
+
+        private static bool IsValidYocoWebhookSignature(
+            string secret,
+            string webhookId,
+            string timestamp,
+            string signatureHeader,
+            Stream requestBody,
+            out string rawBody)
+        {
+            rawBody = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(webhookId) ||
+                string.IsNullOrWhiteSpace(timestamp) ||
+                string.IsNullOrWhiteSpace(signatureHeader) ||
+                !long.TryParse(timestamp, NumberStyles.None, CultureInfo.InvariantCulture, out var timestampSeconds))
+            {
+                return false;
+            }
+
+            // Reject old or future-dated deliveries to reduce replay risk.
+            var timestampDate = DateTimeOffset.FromUnixTimeSeconds(timestampSeconds);
+            if (Math.Abs((DateTimeOffset.UtcNow - timestampDate).TotalMinutes) > 5)
+            {
+                return false;
+            }
+
+            using var reader = new StreamReader(requestBody, Encoding.UTF8, leaveOpen: true);
+            rawBody = reader.ReadToEndAsync().GetAwaiter().GetResult();
+
+            var secretValue = secret.StartsWith("whsec_", StringComparison.Ordinal)
+                ? secret.Substring("whsec_".Length)
+                : secret;
+
+            byte[] secretBytes;
+            try
+            {
+                secretBytes = Convert.FromBase64String(secretValue);
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+
+            var signedContent = $"{webhookId}.{timestamp}.{rawBody}";
+            var expectedSignature = Convert.ToBase64String(
+                HMACSHA256.HashData(secretBytes, Encoding.UTF8.GetBytes(signedContent)));
+
+            foreach (var candidate in signatureHeader.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = candidate.Split(',', 2);
+                if (parts.Length == 2 &&
+                    parts[0] == "v1" &&
+                    CryptographicOperations.FixedTimeEquals(
+                        Encoding.UTF8.GetBytes(parts[1]),
+                        Encoding.UTF8.GetBytes(expectedSignature)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
