@@ -1199,7 +1199,7 @@ namespace DIBA_Backend.Controllers
                     ? $"Your venue booking has been cancelled. No refund is eligible under the current cancellation policy. Reason: {refundReason}"
                     : "Your venue booking has been cancelled. No refund is due because no successful payment was recorded.";
 
-            _dbContext.Notifications.Add(new Notification
+            var cancellationNotification = new Notification
             {
                 NotificationId = Guid.NewGuid(),
                 NotificationType = "Booking Cancelled",
@@ -1208,7 +1208,8 @@ namespace DIBA_Backend.Controllers
                 IsRead = false,
                 UserId = booking.UserId,
                 BookingId = booking.BookingId
-            });
+            };
+            _dbContext.Notifications.Add(cancellationNotification);
 
             // Persist cancellation and refund intent before contacting Yoco.
             // This makes duplicate cancellation requests unable to start a second refund.
@@ -1263,8 +1264,26 @@ namespace DIBA_Backend.Controllers
                     }
                 }
 
-                await _dbContext.SaveChangesAsync();
                 refundStatus = payment.RefundStatus ?? "NeedsReview";
+
+                if (string.Equals(refundStatus, "Succeeded", StringComparison.OrdinalIgnoreCase))
+                {
+                    cancellationNotification.Message =
+                        $"Your venue booking was cancelled. Yoco confirmed your refund of R{refundAmount:F2}. Your bank may take additional time to show the funds.";
+                }
+                else if (string.Equals(refundStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+                {
+                    cancellationNotification.Message =
+                        $"Your venue booking was cancelled. Your refund of R{refundAmount:F2} is being processed. DIBA will update this notification when Yoco confirms the outcome.";
+                }
+                else if (string.Equals(refundStatus, "NeedsReview", StringComparison.OrdinalIgnoreCase))
+                {
+                    cancellationNotification.Message =
+                        $"Your venue booking was cancelled, but the refund of R{refundAmount:F2} needs staff review. Please do not submit another refund request.";
+                }
+
+                auditLog.LogDescription += $" Final refund status: {refundStatus}.";
+                await _dbContext.SaveChangesAsync();
             }
 
             return Ok(new
