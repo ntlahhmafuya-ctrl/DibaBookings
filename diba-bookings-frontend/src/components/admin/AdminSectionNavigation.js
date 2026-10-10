@@ -6,7 +6,11 @@ const sections = [
     ["privacy", "Privacy requests"]
 ];
 
-/**\n * ADMIN SECTION NAVIGATION\n * Responsibility: switch between administrator overview, user, booking, audit, and privacy-request sections.\n */\nfunction AdminSectionNavigation({ activeSection, onSelect }) {
+/**
+ * ADMIN SECTION NAVIGATION
+ * Responsibility: switch between administrator overview, user, booking, audit, and privacy-request sections.
+ */
+function AdminSectionNavigation({ activeSection, onSelect }) {
     return (
         <nav className="section-nav" aria-label="Administrator sections">
             {sections.map(([key, label]) => (
