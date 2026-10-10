@@ -1,6 +1,45 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import api from "../services/api";
 
 function PrivacyPolicy() {
+    const [exporting, setExporting] = useState(false);
+    const [exportMessage, setExportMessage] = useState("");
+
+    const downloadMyData = async () => {
+        if (!localStorage.getItem("token")) {
+            setExportMessage("Please sign in first, then return to this page to download your data.");
+            return;
+        }
+
+        setExporting(true);
+        setExportMessage("");
+
+        try {
+            const response = await api.get("/Users/me/export");
+            const fileContents = JSON.stringify(response.data, null, 2);
+            const file = new Blob([fileContents], { type: "application/json" });
+            const downloadUrl = window.URL.createObjectURL(file);
+            const link = document.createElement("a");
+
+            link.href = downloadUrl;
+            link.download = "diba-bookings-personal-data.json";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+            setExportMessage("Your data file has been prepared. Keep it somewhere private and secure.");
+        } catch (error) {
+            setExportMessage(
+                error.response?.status === 401
+                    ? "Your session has expired. Please sign in again and retry."
+                    : "We could not prepare your data file. Please try again or contact Conference Centre management."
+            );
+        } finally {
+            setExporting(false);
+        }
+    };
     return (
         <main className="privacy-page">
             <header className="privacy-header">
@@ -145,6 +184,31 @@ function PrivacyPolicy() {
                         appropriate security and confidentiality measures in
                         place.
                     </p>
+                </section>
+
+                <section className="privacy-data-tools">
+                    <h2>Access a copy of your DIBA Bookings data</h2>
+                    <p>
+                        If you are signed in, you can download a copy of the
+                        account details, events, bookings, payment summaries,
+                        and notifications currently linked to your account.
+                        The download is a JSON file that you can keep or provide
+                        when making a privacy request. It does not include your
+                        password hash or payment-provider credentials.
+                    </p>
+                    <button
+                        type="button"
+                        className="privacy-download-button"
+                        onClick={downloadMyData}
+                        disabled={exporting}
+                    >
+                        {exporting ? "Preparing your data…" : "Download my data"}
+                    </button>
+                    {exportMessage && (
+                        <p className="privacy-export-message" role="status">
+                            {exportMessage}
+                        </p>
+                    )}
                 </section>
 
                 <section>
