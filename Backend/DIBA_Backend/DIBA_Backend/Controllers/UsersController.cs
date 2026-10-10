@@ -25,6 +25,8 @@ namespace DIBA_Backend.Controllers
             _dbContext = dbContext;
         }
 
+        // FUNCTION: GetMyProfile
+        // RESPONSIBILITY: return only the authenticated user's own profile.
         [HttpGet("me")]
         public async Task<IActionResult> GetMyProfile()
         {
@@ -82,6 +84,129 @@ namespace DIBA_Backend.Controllers
             return Ok(response);
         }
 
+        // FUNCTION: ExportMyData
+        // RESPONSIBILITY: export the authenticated user's account, events, bookings, payment summaries, and notifications.
+        // Provides the authenticated user with a copy of their own account-related data.
+        // The user ID always comes from the validated token, never from a request parameter.
+        [HttpGet("me/export")]
+        public async Task<IActionResult> ExportMyData()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (!Guid.TryParse(userId, out Guid userGuid))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _dbContext.Users
+                .AsNoTracking()
+                .Include(item => item.Role)
+                .FirstOrDefaultAsync(item => item.UserId == userGuid);
+
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var events = await _dbContext.Events
+                .AsNoTracking()
+                .Where(item => item.UserId == userGuid)
+                .Select(item => new
+                {
+                    item.EventId,
+                    item.EventName,
+                    item.EventDescription,
+                    item.EventType,
+                    item.EventAttendance,
+                    item.StartDateTime,
+                    item.EndDateTime,
+                    item.VenueId
+                })
+                .ToListAsync();
+
+            var bookings = await _dbContext.Bookings
+                .AsNoTracking()
+                .Where(item => item.UserId == userGuid)
+                .Select(item => new
+                {
+                    item.BookingId,
+                    item.BookingDate,
+                    item.StartDateTime,
+                    item.EndDateTime,
+                    item.SpecialRequirements,
+                    item.AcknowledgementAccepted,
+                    item.AcknowledgementAcceptedAt,
+                    Status = item.BookingStatus != null
+                        ? item.BookingStatus.StatusName
+                        : "Unknown",
+                    VenueName = item.Venue != null
+                        ? item.Venue.VenueName
+                        : "Unknown",
+                    EventName = item.Event != null
+                        ? item.Event.EventName
+                        : "Unknown",
+                    Payments = item.Payments.Select(payment => new
+                    {
+                        payment.Amount,
+                        payment.PaymentDate,
+                        payment.PaymentStatus,
+                        payment.ReferenceNumber
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            var notifications = await _dbContext.Notifications
+                .AsNoTracking()
+                .Where(item => item.UserId == userGuid)
+                .Select(item => new
+                {
+                    item.NotificationType,
+                    item.Message,
+                    item.DateCreated,
+                    item.IsRead,
+                    item.BookingId
+                })
+                .ToListAsync();
+
+            // PRIVACY REQUEST EXPORT: include the request history linked to this account in the user's data copy.
+            var privacyRequests = await _dbContext.PrivacyRequests
+                .AsNoTracking()
+                .Where(item => item.UserId == userGuid)
+                .Select(item => new
+                {
+                    item.RequestType,
+                    item.Description,
+                    item.Status,
+                    item.SubmittedAtUtc,
+                    item.UpdatedAtUtc,
+                    item.Response
+                })
+                .ToListAsync();
+
+            var export = new
+            {
+                ExportedAtUtc = DateTime.UtcNow,
+                Notice = "This file contains personal information. Store it securely and share it only with people you trust.",
+                Account = new
+                {
+                    user.UserId,
+                    user.FirstName,
+                    user.LastName,
+                    user.Email,
+                    Role = user.Role != null ? user.Role.RoleName : string.Empty,
+                    user.IsActive
+                },
+                Events = events,
+                Bookings = bookings,
+                Notifications = notifications,
+                PrivacyRequests = privacyRequests
+            };
+
+            return Ok(export);
+        }
+
+        // FUNCTION: GetUsers
+        // RESPONSIBILITY: allow Administrators to retrieve user summaries for user management.
         [HttpGet]
 
         // Reference: Microsoft Learn, "Role-based authorization in ASP.NET Core".
@@ -118,6 +243,8 @@ namespace DIBA_Backend.Controllers
             return Ok(users);
         }
 
+        // FUNCTION: UpdateMyProfile
+        // RESPONSIBILITY: update the authenticated user's own name and email while preventing duplicate email addresses.
         [HttpPut("me")]
         public async Task<IActionResult> UpdateMyProfile(
             UpdateUserDto updateUser)

@@ -128,6 +128,13 @@ function Register() {
 
                             </Form>
 
+                            <p className="registration-privacy-note">
+                                We use your account and booking information to
+                                operate DIBA Bookings. Read our{" "}
+                                <Link to="/privacy">Privacy Notice</Link> to
+                                understand how personal information is handled.
+                            </p>
+
                             <div className="text-center mt-3">
                                 Already have an account?{" "}
                                 <Link to="/login">

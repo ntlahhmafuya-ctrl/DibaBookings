@@ -122,6 +122,12 @@ function Login() {
 
                             </Form>
 
+                            <p className="registration-privacy-note">
+                                DIBA Bookings uses account and booking information
+                                to provide this service. Read the{" "}
+                                <Link to="/privacy">Privacy Notice</Link>.
+                            </p>
+
                             <div className="text-center mt-3">
                                 Don't have an account?{" "}
                                 <Link to="/register">

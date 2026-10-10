@@ -586,7 +586,7 @@ const submitEventAndBooking = async (event) => {
     ) => {
         if (
             !window.confirm(
-                "Cancel this booking? This action cannot be undone."
+                "Cancel this booking? This action cannot be undone. Organiser cancellations receive a full refund at least 7 days before the event, a 50% refund from 72 hours to less than 7 days before the event, and no refund less than 72 hours before the event. Refunds are subject to payment-provider confirmation."
             )
         ) {
             return;
@@ -597,27 +597,39 @@ const submitEventAndBooking = async (event) => {
 
 
         try {
-            await cancelBookingRequest(booking.bookingId);
-
+            const response = await cancelBookingRequest(booking.bookingId);
+            const result = response.data || {};
 
             setBookings((current) =>
-                current.map(
-                    (item) =>
-                        item.bookingId ===
-                        booking.bookingId
-                            ? {
-                                  ...item,
-                                  statusName:
-                                      "Cancelled"
-                              }
-                            : item
+                current.map((item) =>
+                    item.bookingId === booking.bookingId
+                        ? { ...item, statusName: "Cancelled" }
+                        : item
                 )
             );
 
+            const refundAmount = Number(result.refundAmount || 0);
+            const refundStatus = String(result.refundStatus || "NotRequired");
 
-            toast.success(
-                "Booking cancelled successfully."
-            );
+            if (refundAmount > 0 && refundStatus.toLowerCase() === "succeeded") {
+                toast.success(
+                    `Booking cancelled. Yoco confirmed your R${refundAmount.toFixed(2)} refund. Your bank may take additional time to show the funds.`
+                );
+            } else if (refundAmount > 0 && refundStatus.toLowerCase() === "pending") {
+                toast.info(
+                    `Booking cancelled. Your R${refundAmount.toFixed(2)} refund is being processed. We will update the status when Yoco confirms the outcome.`
+                );
+            } else if (refundAmount > 0 && refundStatus.toLowerCase() === "needsreview") {
+                toast.warning(
+                    `Booking cancelled, but the R${refundAmount.toFixed(2)} refund needs staff review. Please do not submit another refund request.`
+                );
+            } else if (refundStatus.toLowerCase() === "noteligible") {
+                toast.info(
+                    "Booking cancelled. No refund is due under the current cancellation policy."
+                );
+            } else {
+                toast.success(result.message || "Booking cancelled successfully.");
+            }
 
         } catch (error) {
             toast.error(

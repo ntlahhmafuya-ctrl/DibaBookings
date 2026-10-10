@@ -1,14 +1,29 @@
 import Status from "../../common/StatusBadge";
 
-function VenueCard({ venue, image, onOpen }) {
+function VenueCard({ venue, onOpen }) {
     return (
         <article className="browse-venue-card">
 
             <div className="venue-card-image">
-                <img
-                    src={image}
-                    alt={venue.venueName}
-                />
+                {venue.venueImageData && (
+                    <img
+                        src={venue.venueImageData}
+                        alt={`Photo of ${venue.venueName}`}
+                        onError={(event) => {
+                            event.currentTarget.hidden = true;
+                            const placeholder = event.currentTarget.parentElement?.querySelector(".venue-image-placeholder");
+                            if (placeholder) placeholder.hidden = false;
+                        }}
+                    />
+                )}
+                <div
+                    className="venue-image-placeholder"
+                    role="img"
+                    aria-label={`No photo available for ${venue.venueName}`}
+                    hidden={Boolean(venue.venueImageData)}
+                >
+                    <span>No venue photo</span>
+                </div>
             </div>
 
             <div className="browse-venue-body">

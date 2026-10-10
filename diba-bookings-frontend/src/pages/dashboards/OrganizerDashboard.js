@@ -1,7 +1,3 @@
-import conferenceCentre from "../../assets/images/Conference centre.jpg";
-import theatreImage from "../../assets/images/Theatre (2).jpg";
-import diningImage from "../../assets/images/Dining Room.jpg";
-
 import LoadingIndicator from "../../components/common/LoadingIndicator";
 import OrganizerHome from "../../components/organizer/home/OrganizerHome";
 import VenueBrowser from "../../components/organizer/venues/VenueBrowser";
@@ -16,7 +12,6 @@ import OrganizerSidebar from "../../components/organizer/navigation/OrganizerSid
 import OrganizerTopNav from "../../components/organizer/navigation/OrganizerTopNav";
 import useOrganizerDashboard from "../../hooks/useOrganizerDashboard";
 
-const images = [conferenceCentre, theatreImage, diningImage];
 
 function OrganizerDashboard() {
     const {
@@ -115,16 +110,6 @@ function OrganizerDashboard() {
                     activeVenue && (
                         <VenueDetails
                             venue={activeVenue}
-                            image={
-                                images[
-                                    venues.findIndex(
-                                        (venue) =>
-                                            venue.venueId ===
-                                            activeVenue.venueId
-                                    ) %
-                                        images.length
-                                ]
-                            }
                             onBack={() =>
                                 goTo("venues")
                             }

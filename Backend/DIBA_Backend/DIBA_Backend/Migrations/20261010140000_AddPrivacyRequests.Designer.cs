@@ -4,6 +4,7 @@ using DIBA_Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DIBA_Backend.Migrations
 {
     [DbContext(typeof(DIBABookingsDbContext))]
-    partial class DIBABookingsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261010140000_AddPrivacyRequests")]
+    partial class AddPrivacyRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -420,31 +422,6 @@ namespace DIBA_Backend.Migrations
 
                     b.Property<string>("PaymentStatus")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("RefundAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("RefundProcessedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("RefundFailureReason")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RefundReason")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("RefundRequestedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("RefundRequestKey")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RefundStatus")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("YocoRefundId")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ReferenceNumber")

@@ -5,9 +5,14 @@ import { shortId } from "../../utils/dashboardUtils";
 const sectionTitles = {
     users: ["USER MANAGEMENT", "Users"],
     bookings: ["BOOKING OVERSIGHT", "All bookings"],
-    audit: ["ACCOUNTABILITY", "Audit logs"]
+    audit: ["ACCOUNTABILITY", "Audit logs"],
+    privacy: ["DATA RIGHTS", "Privacy requests"]
 };
 
+/**
+ * ADMINISTRATOR RECORDS PANEL
+ * Responsibility: display searchable user and booking records, audit logs, and the privacy-request review queue.
+ */
 function AdminRecordsPanel({
     activeSection,
     query,
@@ -15,6 +20,8 @@ function AdminRecordsPanel({
     users,
     bookings,
     logs,
+    privacyRequests = [],
+    onUpdatePrivacyRequest,
     onCreateUser,
     onChangeRole,
     onUpdateUser
@@ -33,7 +40,7 @@ function AdminRecordsPanel({
                 )}
             </div>
 
-            {activeSection !== "audit" && (
+            {activeSection !== "audit" && activeSection !== "privacy" && (
                 <Form.Control
                     className="search"
                     placeholder={`Search ${activeSection}...`}
@@ -131,6 +138,54 @@ function AdminRecordsPanel({
                                 </td>
                             </tr>
                         ))}
+                    </tbody>
+                </Table>
+            )}
+
+
+            {activeSection === "privacy" && (
+                <Table responsive hover>
+                    <thead>
+                        <tr>
+                            <th>Requester</th>
+                            <th>Request</th>
+                            <th>Details</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Response</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {privacyRequests.map((request) => (
+                            <tr key={request.privacyRequestId}>
+                                <td>
+                                    <strong>{request.requesterName}</strong>
+                                    <br />
+                                    <small>{request.requesterEmail}</small>
+                                </td>
+                                <td>{request.requestType}</td>
+                                <td>{request.description}</td>
+                                <td>
+                                    <Badge bg={request.status === "Resolved" ? "success" : request.status === "Rejected" ? "danger" : "secondary"}>
+                                        {request.status}
+                                    </Badge>
+                                </td>
+                                <td>{formatDate(request.submittedAtUtc)}</td>
+                                <td>{request.response || "—"}</td>
+                                <td>
+                                    <button
+                                        className="table-action"
+                                        onClick={() => onUpdatePrivacyRequest(request)}
+                                    >
+                                        Review
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        {privacyRequests.length === 0 && (
+                            <tr><td colSpan={7}>No privacy requests have been submitted.</td></tr>
+                        )}
                     </tbody>
                 </Table>
             )}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getVenueFeatures } from "../../../services/venueService";
 import Status from "../../common/StatusBadge";
 
-function VenueDetails({ venue, image, onBack, onBook }) {
+function VenueDetails({ venue, onBack, onBook }) {
     const [features, setFeatures] = useState([]);
     const [loadingFeatures, setLoadingFeatures] = useState(true);
     const [featureError, setFeatureError] = useState("");
@@ -69,10 +69,27 @@ function VenueDetails({ venue, image, onBack, onBook }) {
             </button>
 
             <div className="venue-detail-layout">
-                <img
-                    src={image}
-                    alt={venue.venueName}
-                />
+                <div className="venue-detail-image-wrap">
+                    {venue.venueImageData && (
+                        <img
+                            src={venue.venueImageData}
+                            alt={`Photo of ${venue.venueName}`}
+                            onError={(event) => {
+                                event.currentTarget.hidden = true;
+                                const placeholder = event.currentTarget.parentElement?.querySelector(".venue-image-placeholder");
+                                if (placeholder) placeholder.hidden = false;
+                            }}
+                        />
+                    )}
+                    <div
+                        className="venue-image-placeholder venue-detail-image-placeholder"
+                        role="img"
+                        aria-label={`No photo available for ${venue.venueName}`}
+                        hidden={Boolean(venue.venueImageData)}
+                    >
+                        <span>No venue photo uploaded</span>
+                    </div>
+                </div>
 
                 <div className="detail-copy">
                     <Status

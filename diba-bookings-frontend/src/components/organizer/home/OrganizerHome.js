@@ -1,17 +1,7 @@
 import { useMemo } from "react";
 
-import conferenceCentre from "../../../assets/images/Conference centre.jpg";
-import theatreImage from "../../../assets/images/Theatre (2).jpg";
-import diningImage from "../../../assets/images/Dining Room.jpg";
-
 import EmptyState from "../../common/EmptyState";
 import VenueCard from "../venues/VenueCard";
-
-const images = [
-    conferenceCentre,
-    theatreImage,
-    diningImage
-];
 
 function OrganizerHome({
     firstName,
@@ -221,27 +211,10 @@ function OrganizerHome({
                     {filteredVenues.length > 0 ? (
                         filteredVenues.map((venue) => {
 
-                            const originalIndex =
-                                venues.findIndex(
-                                    (item) =>
-                                        item.venueId ===
-                                        venue.venueId
-                                );
-
-                            const image =
-                                images[
-                                    (
-                                        originalIndex >= 0
-                                            ? originalIndex
-                                            : 0
-                                    ) % images.length
-                                ];
-
                             return (
                                 <VenueCard
                                     key={venue.venueId}
                                     venue={venue}
-                                    image={image}
                                     onOpen={onOpenVenue}
                                 />
                             );

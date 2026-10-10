@@ -19,5 +19,7 @@
         public double Longitude { get; set; }
 
         public string VenueStatus { get; set; } = string.Empty;
+
+        public string? VenueImageData { get; set; }
     }
 }
