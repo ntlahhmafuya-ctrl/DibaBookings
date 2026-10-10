@@ -58,7 +58,14 @@ namespace DIBA_Backend.Controllers
                     PaymentDate = p.PaymentDate,
                     ReferenceNumber = p.ReferenceNumber,
                     BookingId = p.BookingId,
-                    PaymentStatus = p.PaymentStatus
+                    PaymentStatus = p.PaymentStatus,
+                    RefundAmount = p.RefundAmount,
+                    RefundReason = p.RefundReason,
+                    RefundStatus = p.RefundStatus,
+                    RefundRequestedAtUtc = p.RefundRequestedAtUtc,
+                    RefundProcessedAtUtc = p.RefundProcessedAtUtc,
+                    YocoRefundId = p.YocoRefundId,
+                    RefundFailureReason = p.RefundFailureReason
                 })
                 .ToListAsync();
 
@@ -131,7 +138,14 @@ namespace DIBA_Backend.Controllers
                 PaymentDate = payment.PaymentDate,
                 ReferenceNumber = payment.ReferenceNumber,
                 BookingId = payment.BookingId,
-                PaymentStatus = payment.PaymentStatus
+                PaymentStatus = payment.PaymentStatus,
+                RefundAmount = payment.RefundAmount,
+                RefundReason = payment.RefundReason,
+                RefundStatus = payment.RefundStatus,
+                RefundRequestedAtUtc = payment.RefundRequestedAtUtc,
+                RefundProcessedAtUtc = payment.RefundProcessedAtUtc,
+                YocoRefundId = payment.YocoRefundId,
+                RefundFailureReason = payment.RefundFailureReason
             };
 
             return Ok(response);
@@ -313,6 +327,8 @@ namespace DIBA_Backend.Controllers
         // POST: api/Payments/yoco/webhook
         // Yoco calls this public endpoint after a payment status changes.
         // A webhook is trusted only after its signature and timestamp are verified.
+        // POST: api/Payments/yoco/webhook
+        // Yoco calls this endpoint after payment or refund status changes.
         [HttpPost("yoco/webhook")]
         [AllowAnonymous]
         public async Task<IActionResult> HandleYocoWebhook()
@@ -351,14 +367,14 @@ namespace DIBA_Backend.Controllers
             {
                 using var document = JsonDocument.Parse(rawBody);
                 var root = document.RootElement;
-
                 var eventType = root.TryGetProperty("type", out var typeElement)
                     ? typeElement.GetString()
                     : null;
 
-                if (eventType is not ("payment.succeeded" or "payment.failed"))
+                if (eventType is not (
+                    "payment.succeeded" or "payment.failed" or
+                    "refund.succeeded" or "refund.failed"))
                 {
-                    // Acknowledge unrelated event types without changing payment data.
                     return Ok(new { received = true, ignored = true });
                 }
 
@@ -373,9 +389,6 @@ namespace DIBA_Backend.Controllers
                     return BadRequest("Yoco webhook payload is missing required payment details.");
                 }
 
-                // The checkout is created with our DIBA reference in metadata.
-                // Yoco cannot echo a checkout ID in metadata that we did not know
-                // when creating the checkout, so match using the reference we set.
                 var referenceNumber = referenceElement.GetString();
                 if (string.IsNullOrWhiteSpace(referenceNumber))
                 {
@@ -387,32 +400,75 @@ namespace DIBA_Backend.Controllers
 
                 if (payment == null)
                 {
-                    // Return a retryable failure so a webhook arriving before
-                    // the local payment record can be delivered again.
-                    return StatusCode(500, "Payment record for this Yoco checkout was not found.");
+                    // A 5xx response allows a not-yet-correlated event to be retried.
+                    return StatusCode(500, "Payment record for this Yoco reference was not found.");
                 }
 
-                var expectedAmountInCents = (long)Math.Round(
-                    payment.Amount * 100,
-                    MidpointRounding.AwayFromZero);
+                if (eventType is "payment.succeeded" or "payment.failed")
+                {
+                    var expectedPaymentCents = (long)Math.Round(
+                        payment.Amount * 100,
+                        MidpointRounding.AwayFromZero);
 
-                if (amountInCents != expectedAmountInCents)
-                {
-                    return BadRequest("Yoco payment amount does not match the recorded booking amount.");
-                }
+                    if (amountInCents != expectedPaymentCents)
+                    {
+                        return BadRequest("Yoco payment amount does not match the recorded booking amount.");
+                    }
 
-                // Do not let duplicate or delayed failure events downgrade a successful payment.
-                if (eventType == "payment.succeeded")
-                {
-                    payment.PaymentStatus = "Succeeded";
+                    // A delayed failure event must never downgrade a successful payment.
+                    if (eventType == "payment.succeeded")
+                    {
+                        payment.PaymentStatus = "Succeeded";
+                    }
+                    else if (string.Equals(payment.PaymentStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+                    {
+                        payment.PaymentStatus = "Failed";
+                    }
                 }
-                else if (string.Equals(payment.PaymentStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+                else
                 {
-                    payment.PaymentStatus = "Failed";
+                    var expectedRefundCents = (long)Math.Round(
+                        (payment.RefundAmount ?? 0m) * 100,
+                        MidpointRounding.AwayFromZero);
+
+                    if (expectedRefundCents <= 0 ||
+                        amountInCents != expectedRefundCents ||
+                        string.IsNullOrWhiteSpace(payment.RefundStatus))
+                    {
+                        return BadRequest("Yoco refund amount does not match a recorded refund request.");
+                    }
+
+                    if (eventType == "refund.succeeded")
+                    {
+                        payment.RefundStatus = "Succeeded";
+                        payment.RefundProcessedAtUtc = DateTime.UtcNow;
+
+                        if (payload.TryGetProperty("id", out var refundIdElement))
+                        {
+                            payment.YocoRefundId = refundIdElement.GetString() ?? payment.YocoRefundId;
+                        }
+
+                        payment.RefundFailureReason = null;
+                    }
+                    else if (!string.Equals(
+                        payment.RefundStatus, "Succeeded", StringComparison.OrdinalIgnoreCase))
+                    {
+                        payment.RefundStatus = "Failed";
+                        payment.RefundProcessedAtUtc = DateTime.UtcNow;
+
+                        if (payload.TryGetProperty("id", out var refundIdElement))
+                        {
+                            payment.YocoRefundId = refundIdElement.GetString() ?? payment.YocoRefundId;
+                        }
+
+                        payment.RefundFailureReason =
+                            payload.TryGetProperty("failureReason", out var reasonElement)
+                                ? reasonElement.GetString()
+                                : "Yoco reported that the refund failed.";
+                    }
                 }
 
                 await dbContext.SaveChangesAsync();
-
                 return Ok(new { received = true });
             }
             catch (JsonException)
