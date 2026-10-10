@@ -1,4 +1,5 @@
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 import { clearSession } from "../../../utils/sessionUtils";
 
@@ -10,6 +11,10 @@ const navItems = [
     ["◌", "Notifications", "notifications"]
 ];
 
+/**
+ * ORGANISER SIDEBAR
+ * Responsibility: provide organiser workspace navigation and account actions.
+ */
 function OrganizerSidebar({
     view,
     unread,
@@ -17,6 +22,8 @@ function OrganizerSidebar({
     setDrawerOpen,
     goTo
 }) {
+    const navigate = useNavigate();
+
     return (
         <>
             {drawerOpen && (
@@ -97,11 +104,7 @@ function OrganizerSidebar({
                     <button
                         type="button"
                         className="nav-item"
-                        onClick={() =>
-                            toast.info(
-                                "Profile settings are not available in the current API."
-                            )
-                        }
+                        onClick={() => navigate("/profile")}
                     >
                         <span className="nav-icon">
                             ◎
