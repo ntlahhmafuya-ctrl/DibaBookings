@@ -111,8 +111,10 @@ builder.Services.AddAuthentication(
 
                 IssuerSigningKey =
                     new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(
-                            builder.Configuration["Jwt:Key"]))
+               Encoding.UTF8.GetBytes(
+    builder.Configuration["Jwt:Key"]
+        ?? throw new InvalidOperationException(
+            "JWT signing key is missing from configuration.")))
             };
     });
 
@@ -137,7 +139,7 @@ using (var scope = app.Services.CreateScope())
         scope.ServiceProvider
             .GetRequiredService<DIBABookingsDbContext>();
 
-    await DbSeeder.SeedAsync(dbContext);
+    //await DbSeeder.SeedAsync(dbContext);
 }
 
 app.UseCors("MyPolicy");
