@@ -20,6 +20,11 @@ function BookingCalendar({
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
 
+    // Disable event dates that do not meet DIBA's seven-calendar-day notice rule.
+    const earliestAllowedDate = new Date();
+    earliestAllowedDate.setHours(0, 0, 0, 0);
+    earliestAllowedDate.setDate(earliestAllowedDate.getDate() + 7);
+
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
 
@@ -99,6 +104,8 @@ function BookingCalendar({
         if (!day) return;
 
         const date = new Date(year, month, day);
+
+        if (date < earliestAllowedDate) return;
 
         onDateSelect(date);
     };
@@ -288,7 +295,7 @@ function BookingCalendar({
                     <button
                         key={index}
                         type="button"
-                        disabled={!day}
+                        disabled={!day || new Date(year, month, day) < earliestAllowedDate}
                         className={
                             day && isSelected(day)
                                 ? "calendar-day selected"
