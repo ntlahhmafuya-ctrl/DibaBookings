@@ -117,6 +117,18 @@ public class AccountSecurityTests
     {
         private readonly string _databaseName = $"DibaSecurityTests-{Guid.NewGuid():N}";
 
+        static DibaApiFactory()
+        {
+            // Minimal-host startup validates configuration before the test
+            // server's later ConfigureWebHost callbacks are applied. Set
+            // isolated test-only environment values before Program starts.
+            Environment.SetEnvironmentVariable("Jwt__Key", "DIBA-Test-Signing-Key-At-Least-32-Bytes!");
+            Environment.SetEnvironmentVariable("Jwt__Issuer", "DIBA.Security.Tests");
+            Environment.SetEnvironmentVariable("Jwt__Audience", "DIBA.Security.Tests");
+            Environment.SetEnvironmentVariable("ConnectionStrings__DbConn",
+                "Server=localhost;Database=DibaTests;Trusted_Connection=True;TrustServerCertificate=True");
+        }
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Testing");
