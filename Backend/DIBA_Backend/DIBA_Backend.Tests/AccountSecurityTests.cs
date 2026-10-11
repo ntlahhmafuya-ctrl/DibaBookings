@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
+using DIBA_Backend.Services;
 using DIBA_Backend.Data;
 using DIBA_Backend.Models.Entities;
 using Microsoft.AspNetCore.Hosting;
@@ -144,6 +146,90 @@ public class AccountSecurityTests
 
         var response = await client.PostAsJsonAsync("/api/Payments", new { BookingId = bookingId });
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+
+    [Fact]
+    public async Task YocoTimeoutRetainsReservationAndRetryReusesIdempotencyKey()
+    {
+        using var factory = new DibaApiFactory();
+        using var client = factory.CreateClient();
+        var userId = await SeedUserAsync(factory);
+        var bookingId = await SeedApprovedBookingAsync(factory, userId);
+
+        // Simulate a timeout: Yoco may have created the checkout even though
+        // DIBA did not receive a response. The payment must remain recoverable.
+        factory.YocoHandler.ResponseFactory = _ =>
+            throw new TaskCanceledException("Simulated Yoco checkout timeout.");
+
+        var token = await LoginAsync(client, OriginalPassword);
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var firstResponse = await client.PostAsJsonAsync(
+            "/api/Payments",
+            new { BookingId = bookingId });
+
+        Assert.Equal(HttpStatusCode.BadGateway, firstResponse.StatusCode);
+
+        Guid originalPaymentId;
+        string? originalReference;
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DIBABookingsDbContext>();
+            var payment = await db.Payments.SingleAsync(
+                item => item.BookingId == bookingId);
+
+            Assert.Equal("Pending", payment.PaymentStatus);
+            Assert.Null(payment.YocoCheckoutId);
+
+            originalPaymentId = payment.PaymentId;
+            originalReference = payment.ReferenceNumber;
+        }
+
+        // On retry, simulate Yoco returning the checkout associated with the
+        // original idempotency key.
+        factory.YocoHandler.ResponseFactory = _ =>
+            new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                    {
+                      "id": "checkout_recovered_test",
+                      "redirectUrl": "https://checkout.example/test",
+                      "status": "created"
+                    }
+                    """,
+                    Encoding.UTF8,
+                    "application/json")
+            };
+
+        var retryResponse = await client.PostAsJsonAsync(
+            "/api/Payments",
+            new { BookingId = bookingId });
+
+        Assert.Equal(HttpStatusCode.OK, retryResponse.StatusCode);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DIBABookingsDbContext>();
+            var payments = await db.Payments
+                .Where(item => item.BookingId == bookingId)
+                .ToListAsync();
+
+            var recoveredPayment = Assert.Single(payments);
+            Assert.Equal(originalPaymentId, recoveredPayment.PaymentId);
+            Assert.Equal(originalReference, recoveredPayment.ReferenceNumber);
+            Assert.Equal("Pending", recoveredPayment.PaymentStatus);
+            Assert.Equal("checkout_recovered_test", recoveredPayment.YocoCheckoutId);
+        }
+
+        Assert.Equal(2, factory.YocoHandler.IdempotencyKeys.Count);
+        Assert.False(string.IsNullOrWhiteSpace(factory.YocoHandler.IdempotencyKeys[0]));
+        Assert.Equal(
+            factory.YocoHandler.IdempotencyKeys[0],
+            factory.YocoHandler.IdempotencyKeys[1]);
     }
 
     [Fact]
@@ -290,9 +376,106 @@ public class AccountSecurityTests
         return user.UserId;
     }
 
+
+    private static async Task<Guid> SeedApprovedBookingAsync(
+        DibaApiFactory factory,
+        Guid userId)
+    {
+        var venueId = Guid.NewGuid();
+        var eventId = Guid.NewGuid();
+        var bookingId = Guid.NewGuid();
+        var approvedStatusId = Guid.NewGuid();
+        var start = DateTime.UtcNow.Date.AddDays(10).AddHours(9);
+        var end = start.AddHours(2);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DIBABookingsDbContext>();
+
+        db.Venues.Add(new Venue
+        {
+            VenueId = venueId,
+            VenueName = "Payment Recovery Test Venue",
+            VenueDescription = "Test-only venue",
+            Capacity = 20,
+            Price = 750m,
+            Location = "Test",
+            Latitude = 0,
+            Longitude = 0,
+            VenueStatus = "Available"
+        });
+
+        db.Events.Add(new Event
+        {
+            EventId = eventId,
+            EventName = "Payment Recovery Test Event",
+            EventDescription = "Test-only event",
+            StartDateTime = start,
+            EndDateTime = end,
+            VenueId = venueId,
+            UserId = userId
+        });
+
+        db.BookingStatuses.Add(new BookingStatus
+        {
+            BookingStatusId = approvedStatusId,
+            StatusName = "Approved"
+        });
+
+        db.Bookings.Add(new Booking
+        {
+            BookingId = bookingId,
+            BookingDate = DateTime.UtcNow,
+            StartDateTime = start,
+            EndDateTime = end,
+            UserId = userId,
+            EventId = eventId,
+            VenueId = venueId,
+            BookingStatusId = approvedStatusId,
+            AcknowledgementAccepted = true,
+            AcknowledgementAcceptedAt = DateTime.UtcNow
+        });
+
+        await db.SaveChangesAsync();
+        return bookingId;
+    }
+
+    private sealed class FakeYocoHandler : HttpMessageHandler
+    {
+        public List<string> IdempotencyKeys { get; } = new();
+
+        public Func<HttpRequestMessage, HttpResponseMessage> ResponseFactory { get; set; } =
+            _ => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """
+                    {
+                      "id": "checkout_default_test",
+                      "redirectUrl": "https://checkout.example/test",
+                      "status": "created"
+                    }
+                    """,
+                    Encoding.UTF8,
+                    "application/json")
+            };
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            if (request.Headers.TryGetValues("Idempotency-Key", out var values))
+            {
+                IdempotencyKeys.Add(values.Single());
+            }
+
+            return Task.FromResult(ResponseFactory(request));
+        }
+    }
+
     private sealed class DibaApiFactory : WebApplicationFactory<Program>
     {
         private readonly string _databaseName = $"DibaSecurityTests-{Guid.NewGuid():N}";
+
+        public FakeYocoHandler YocoHandler { get; } = new();
 
         static DibaApiFactory()
         {
@@ -316,7 +499,10 @@ public class AccountSecurityTests
                     ["Jwt:Key"] = "DIBA-Test-Signing-Key-At-Least-32-Bytes!",
                     ["Jwt:Issuer"] = "DIBA.Security.Tests",
                     ["Jwt:Audience"] = "DIBA.Security.Tests",
-                    ["ConnectionStrings:DbConn"] = "Server=localhost;Database=DibaTests;Trusted_Connection=True;TrustServerCertificate=True"
+                    ["ConnectionStrings:DbConn"] = "Server=localhost;Database=DibaTests;Trusted_Connection=True;TrustServerCertificate=True",
+                    ["Yoco:SecretKey"] = "test_yoco_secret_key",
+                    ["Yoco:SuccessUrl"] = "https://example.test/payment/success",
+                    ["Yoco:CancelUrl"] = "https://example.test/payment/cancel"
                 });
             });
 
@@ -327,6 +513,11 @@ public class AccountSecurityTests
                     options.UseInMemoryDatabase(_databaseName)
                         .ConfigureWarnings(warnings =>
                             warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
+
+                // Override the production typed client's transport so tests never
+                // contact Yoco and can simulate uncertain checkout outcomes.
+                services.AddHttpClient<YocoPaymentService>()
+                    .ConfigurePrimaryHttpMessageHandler(() => YocoHandler);
             });
         }
     }
