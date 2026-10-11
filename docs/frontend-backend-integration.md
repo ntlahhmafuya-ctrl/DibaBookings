@@ -20,6 +20,19 @@ This document maps the React frontend to the ASP.NET Core API on the `integratio
 | Admin controls and audit | Administrator dashboard | `/api/Administration`, `/api/Users`, `/api/AuditLogs` | Access depends on the API's role restrictions. |
 | Yoco webhooks and email | Backend services | `POST /api/Payments/yoco/webhook` plus notification/email service | Provider callbacks are server-to-server; they are not called directly from the browser. Verify in sandbox. |
 
+## Required deployed Yoco configuration
+
+Set these values in the **backend hosting environment**, not in React and not in a committed settings file:
+
+- `Yoco__SuccessUrl=https://YOUR-FRONTEND-DOMAIN/payment/success`
+- `Yoco__CancelUrl=https://YOUR-FRONTEND-DOMAIN/payment/cancel`
+- `Yoco__WebhookSecret=whsec_...` using the signing secret for the same Yoco key/mode.
+- Register this webhook URL in Yoco for the matching test/live mode: `https://YOUR-API-DOMAIN/api/Payments/yoco/webhook`.
+
+The success/cancel URLs must point to the deployed React application, not the API host or a development-only localhost URL. The return page includes the booking ID and polls DIBA for the saved payment state; a redirect by itself is **not** proof that payment succeeded.
+
+Yoco's Checkout API guidance says each payment must be confirmed via a registered webhook and that API calls must remain server-side. If a payment already succeeded in Yoco but DIBA still says Pending, do not pay again and do not attempt a cancellation/refund until the webhook has been delivered and DIBA has confirmed the result. Check the Yoco webhook delivery log and re-deliver the matching event if the dashboard supports it. A successful payment should change the saved payment to `Succeeded` and create the organiser's payment notification.
+
 ## Manual integration test checklist
 
 Use a development/test database and Yoco sandbox credentials only.
