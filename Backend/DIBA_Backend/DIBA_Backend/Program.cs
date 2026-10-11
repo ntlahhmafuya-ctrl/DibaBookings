@@ -53,7 +53,7 @@ builder.Services.AddSwaggerGen(c =>
 
     // Similar Swagger security requirement logic:
     // tells Swagger that the Bearer token should be used when
-    // calling protected API endpoints.
+    // calling protected endpoints.
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -126,19 +126,6 @@ builder.Services.AddAuthentication(
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
-
-
-// DIBA-specific database initialization.
-// The application creates a service scope and obtains the database
-// context before seeding the required initial roles/statuses/test data.
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext =
-        scope.ServiceProvider
-            .GetRequiredService<DIBABookingsDbContext>();
-
-    await DbSeeder.SeedAsync(dbContext);
-}
 
 app.UseCors("MyPolicy");
 
