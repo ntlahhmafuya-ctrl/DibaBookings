@@ -21,6 +21,13 @@ function Profile() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+    const [passwordForm, setPasswordForm] = useState({
+        currentPassword: "",
+        newPassword: "",
+        confirmNewPassword: ""
+    });
+    const [passwordSaving, setPasswordSaving] = useState(false);
+    const [passwordMessage, setPasswordMessage] = useState("");
 
     // LOAD PROFILE: fetch the authenticated user's current details from the API.
     useEffect(() => {
@@ -93,6 +100,52 @@ function Profile() {
             setErrorMessage(message);
         } finally {
             setSaving(false);
+        }
+    };
+
+    // CHANGE PASSWORD: send only the current password and a validated new password.
+    const handlePasswordSubmit = async (event) => {
+        event.preventDefault();
+        setPasswordMessage("");
+
+        if (passwordForm.newPassword.length < 12) {
+            setPasswordMessage("Your new password must be at least 12 characters long.");
+            return;
+        }
+        if (passwordForm.newPassword.length > 72) {
+            setPasswordMessage("Your new password cannot exceed 72 characters.");
+            return;
+        }
+        if (passwordForm.newPassword !== passwordForm.confirmNewPassword) {
+            setPasswordMessage("The new passwords do not match.");
+            return;
+        }
+        if (passwordForm.currentPassword === passwordForm.newPassword) {
+            setPasswordMessage("Choose a new password that is different from your current password.");
+            return;
+        }
+
+        setPasswordSaving(true);
+        try {
+            const response = await api.post("/Account/change-password", {
+                currentPassword: passwordForm.currentPassword,
+                newPassword: passwordForm.newPassword
+            });
+            setPasswordForm({
+                currentPassword: "",
+                newPassword: "",
+                confirmNewPassword: ""
+            });
+            setPasswordMessage(response.data?.message || "Password changed successfully.");
+            toast.success("Password changed successfully.");
+        } catch (error) {
+            const data = error.response?.data;
+            const message = typeof data === "string"
+                ? data
+                : data?.message || data?.title || "We could not change your password. Please try again.";
+            setPasswordMessage(message);
+        } finally {
+            setPasswordSaving(false);
         }
     };
 
@@ -184,6 +237,58 @@ function Profile() {
                                         </div>
                                     </Form>
                                 )}
+
+                                <hr className="my-4" />
+                                <section aria-labelledby="change-password-heading">
+                                    <p className="profile-eyebrow">ACCOUNT SECURITY</p>
+                                    <h2 id="change-password-heading" className="h4">Change password</h2>
+                                    <p className="text-secondary">
+                                        Use at least 12 characters. For your security, you must enter your current password.
+                                    </p>
+                                    {passwordMessage && (
+                                        <div className="alert alert-info" role="status">{passwordMessage}</div>
+                                    )}
+                                    <Form onSubmit={handlePasswordSubmit}>
+                                        <Form.Group className="mb-3" controlId="currentPassword">
+                                            <Form.Label>Current password</Form.Label>
+                                            <Form.Control
+                                                type="password"
+                                                autoComplete="current-password"
+                                                required
+                                                maxLength={72}
+                                                value={passwordForm.currentPassword}
+                                                onChange={(event) => setPasswordForm((current) => ({ ...current, currentPassword: event.target.value }))}
+                                            />
+                                        </Form.Group>
+                                        <Form.Group className="mb-3" controlId="newPassword">
+                                            <Form.Label>New password</Form.Label>
+                                            <Form.Control
+                                                type="password"
+                                                autoComplete="new-password"
+                                                required
+                                                minLength={12}
+                                                maxLength={72}
+                                                value={passwordForm.newPassword}
+                                                onChange={(event) => setPasswordForm((current) => ({ ...current, newPassword: event.target.value }))}
+                                            />
+                                        </Form.Group>
+                                        <Form.Group className="mb-3" controlId="confirmNewPassword">
+                                            <Form.Label>Confirm new password</Form.Label>
+                                            <Form.Control
+                                                type="password"
+                                                autoComplete="new-password"
+                                                required
+                                                minLength={12}
+                                                maxLength={72}
+                                                value={passwordForm.confirmNewPassword}
+                                                onChange={(event) => setPasswordForm((current) => ({ ...current, confirmNewPassword: event.target.value }))}
+                                            />
+                                        </Form.Group>
+                                        <Button type="submit" disabled={passwordSaving}>
+                                            {passwordSaving ? "Changing password…" : "Change password"}
+                                        </Button>
+                                    </Form>
+                                </section>
 
                                 <p className="profile-privacy-link">
                                     Need a copy of your information? Visit the <Link to="/privacy">Privacy Notice</Link>.
