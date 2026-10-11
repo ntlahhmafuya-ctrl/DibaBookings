@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace DIBA_Backend.Controllers
@@ -235,6 +236,14 @@ namespace DIBA_Backend.Controllers
                 new Claim(
                     ClaimTypes.NameIdentifier,
                     user.UserId.ToString()),
+
+                // This fingerprint changes whenever the stored password hash
+                // changes. The API checks it against the current account on
+                // each authenticated request, revoking older access tokens.
+                new Claim(
+                    "diba_password_version",
+                    Convert.ToHexString(
+                        SHA256.HashData(Encoding.UTF8.GetBytes(user.PasswordHash)))),
 
                 // Reference: claim-based authentication pattern.
                 // DIBA stores the user's email as the authenticated name.
