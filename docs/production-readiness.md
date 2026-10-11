@@ -26,7 +26,7 @@ Do not deploy with localhost URLs, demo credentials, a missing JWT key, or wildc
    `dotnet ef database update --project Backend/DIBA_Backend/DIBA_Backend/DIBA_Backend.csproj`
 6. Verify migration history and reference roles/statuses. Demo users and sample bookings must never be seeded into production.
 7. Provision the first production Administrator through an approved, audited out-of-band process after migrations. The Development-only demo administrator is not created in production, and there is intentionally no public administrator-bootstrap endpoint.
-8. Deploy the API and verify `/health`, database connectivity, login, registration, booking operations, and payment webhooks in the correct environment.
+8. Deploy the API and verify `/health/live` (process liveness), `/health/ready` (database readiness), and the compatibility `/health` endpoint, then test login, registration, booking operations, and payment webhooks in the correct environment.
 
 The application seeds demo users and sample venue/event data only in Development. Production database migrations are not automatically run at API startup.
 
@@ -36,6 +36,7 @@ The application seeds demo users and sample venue/event data only in Development
 - Verify the webhook URL, secret, timestamp tolerance, duplicate delivery handling, amount/currency/reference checks, and replay handling with Yoco's test environment before enabling live payments.
 - Reconcile failed or uncertain refund requests with Yoco before retrying. Do not retry a refund marked `NeedsReview` without checking Yoco's records.
 - Current cancellation logic is a proposed policy: organiser cancellation 7 or more days before the event = full refund; 72 hours to less than 7 days = 50%; less than 72 hours = no refund; DIBA-initiated cancellation = full refund. The responsible organisation must formally approve this policy and display it to users before production.
+- Checkout creation now sends a stable Yoco idempotency key per booking attempt. Verify Yoco's idempotency behaviour in the test environment, especially timeouts after provider-side creation, local database-save failures, simultaneous duplicate requests, and retries after a confirmed failure.
 - Test payment failures, delayed/duplicate webhooks, webhook signature failures, duplicate checkout attempts, partial refunds, and Yoco timeouts.
 
 ## 4. Privacy, email, and operational controls
