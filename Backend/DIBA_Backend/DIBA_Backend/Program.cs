@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -156,6 +158,54 @@ builder.Services.AddAuthentication(
                 IssuerSigningKey = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(jwtKey!))
             };
+
+        // Re-check the account on every authenticated request. This lets
+        // password changes and account deactivation invalidate existing JWTs
+        // immediately, without adding a database column or applying a migration.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var userIdClaim = context.Principal?
+                    .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var tokenPasswordVersion = context.Principal?
+                    .FindFirst("diba_password_version")?.Value;
+
+                if (!Guid.TryParse(userIdClaim, out var userId) ||
+                    string.IsNullOrWhiteSpace(tokenPasswordVersion))
+                {
+                    context.Fail("The access token is no longer valid.");
+                    return;
+                }
+
+                var dbContext = context.HttpContext.RequestServices
+                    .GetRequiredService<DIBABookingsDbContext>();
+
+                var account = await dbContext.Users
+                    .AsNoTracking()
+                    .Where(user => user.UserId == userId)
+                    .Select(user => new { user.IsActive, user.PasswordHash })
+                    .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+
+                if (account == null || !account.IsActive)
+                {
+                    context.Fail("The account is not active.");
+                    return;
+                }
+
+                var currentPasswordVersion = Convert.ToHexString(
+                    SHA256.HashData(Encoding.UTF8.GetBytes(account.PasswordHash)));
+
+                var suppliedBytes = Encoding.UTF8.GetBytes(tokenPasswordVersion);
+                var currentBytes = Encoding.UTF8.GetBytes(currentPasswordVersion);
+
+                if (suppliedBytes.Length != currentBytes.Length ||
+                    !CryptographicOperations.FixedTimeEquals(suppliedBytes, currentBytes))
+                {
+                    context.Fail("The access token has been revoked.");
+                }
+            }
+        };
     });
 
 
