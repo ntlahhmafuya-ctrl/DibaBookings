@@ -1,6 +1,8 @@
 using DIBA_Backend.Data;
+using DIBA_Backend.Health;
 using DIBA_Backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -11,7 +13,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpClient<YocoPaymentService>();
 builder.Services.AddScoped<NotificationEmailService>();
 builder.Services.AddProblemDetails();
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseReadinessHealthCheck>(
+        "database",
+        tags: new[] { "ready" });
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
@@ -188,6 +193,18 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+// Liveness only confirms that the API process is responding.
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+});
+
+// Readiness includes the database dependency check. The existing /health
+// endpoint is retained for compatibility and reports all registered checks.
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
 app.MapHealthChecks("/health");
 
 app.Run();
