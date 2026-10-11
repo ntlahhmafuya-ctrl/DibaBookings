@@ -425,7 +425,7 @@ namespace DIBA_Backend.Controllers
                     payment.ReferenceNumber ?? payment.PaymentId.ToString(),
                     payment.RefundRequestKey);
 
-                payment.YocoRefundId = refund?.RefundId ?? payment.YocoRefundId;
+                payment.YocoRefundId = refund?.RefundId ?? refund?.Id ?? payment.YocoRefundId;
 
                 if (string.Equals(refund?.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
                 {
