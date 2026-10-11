@@ -1,21 +1,71 @@
 using DIBA_Backend.Data;
+using DIBA_Backend.Health;
 using DIBA_Backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Apply a per-client-IP limit to expensive anonymous authentication attempts.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
+
 builder.Services.AddHttpClient<YocoPaymentService>();
+builder.Services.AddScoped<NotificationEmailService>();
+builder.Services.AddProblemDetails();
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseReadinessHealthCheck>(
+        "database",
+        tags: new[] { "ready" });
+
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "Jwt:Key must be configured as a secret containing at least 32 UTF-8 bytes.");
+}
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+if (string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
+{
+    throw new InvalidOperationException("Jwt:Issuer and Jwt:Audience must be configured.");
+}
+
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("MyPolicy", builder =>
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader());
+    options.AddPolicy("MyPolicy", policy =>
+    {
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+    });
 });
 
 builder.Services.AddControllers();
@@ -103,17 +153,59 @@ builder.Services.AddAuthentication(
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
 
-                ValidIssuer =
-                    builder.Configuration["Jwt:Issuer"],
-
-                ValidAudience =
-                    builder.Configuration["Jwt:Audience"],
-
-                IssuerSigningKey =
-                    new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(
-                            builder.Configuration["Jwt:Key"]))
+                ValidIssuer = jwtIssuer,
+                ValidAudience = jwtAudience,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtKey!))
             };
+
+        // Re-check the account on every authenticated request. This lets
+        // password changes and account deactivation invalidate existing JWTs
+        // immediately, without adding a database column or applying a migration.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var userIdClaim = context.Principal?
+                    .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var tokenPasswordVersion = context.Principal?
+                    .FindFirst("diba_password_version")?.Value;
+
+                if (!Guid.TryParse(userIdClaim, out var userId) ||
+                    string.IsNullOrWhiteSpace(tokenPasswordVersion))
+                {
+                    context.Fail("The access token is no longer valid.");
+                    return;
+                }
+
+                var dbContext = context.HttpContext.RequestServices
+                    .GetRequiredService<DIBABookingsDbContext>();
+
+                var account = await dbContext.Users
+                    .AsNoTracking()
+                    .Where(user => user.UserId == userId)
+                    .Select(user => new { user.IsActive, user.PasswordHash })
+                    .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+
+                if (account == null || !account.IsActive)
+                {
+                    context.Fail("The account is not active.");
+                    return;
+                }
+
+                var currentPasswordVersion = Convert.ToHexString(
+                    SHA256.HashData(Encoding.UTF8.GetBytes(account.PasswordHash)));
+
+                var suppliedBytes = Encoding.UTF8.GetBytes(tokenPasswordVersion);
+                var currentBytes = Encoding.UTF8.GetBytes(currentPasswordVersion);
+
+                if (suppliedBytes.Length != currentBytes.Length ||
+                    !CryptographicOperations.FixedTimeEquals(suppliedBytes, currentBytes))
+                {
+                    context.Fail("The access token has been revoked.");
+                }
+            }
+        };
     });
 
 
@@ -127,20 +219,22 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// Return safe ProblemDetails responses instead of exposing exception details.
+app.UseExceptionHandler();
 
-// DIBA-specific database initialization.
-// The application creates a service scope and obtains the database
-// context before seeding the required initial roles/statuses/test data.
-using (var scope = app.Services.CreateScope())
+
+// Demo accounts and sample records must only be created in Development.
+// Production migrations are applied explicitly during deployment.
+if (app.Environment.IsDevelopment())
 {
-    var dbContext =
-        scope.ServiceProvider
-            .GetRequiredService<DIBABookingsDbContext>();
-
-    await DbSeeder.SeedAsync(dbContext);
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<DIBABookingsDbContext>();
+    //await DbSeeder.SeedAsync(dbContext);
 }
 
+app.UseRouting();
 app.UseCors("MyPolicy");
+app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {
@@ -168,5 +262,21 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+// Liveness only confirms that the API process is responding.
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+});
+
+// Readiness includes the database dependency check. The existing /health
+// endpoint is retained for compatibility and reports all registered checks.
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+app.MapHealthChecks("/health");
 
 app.Run();
+
+// Expose the top-level entry point to the integration-test host.
+public partial class Program { }
