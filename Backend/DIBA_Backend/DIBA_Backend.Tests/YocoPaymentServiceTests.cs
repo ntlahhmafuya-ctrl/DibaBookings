@@ -124,6 +124,21 @@ public class YocoPaymentServiceTests
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
+    public async Task RefundRequestRejectsMissingIdempotencyKey(string idempotencyKey)
+    {
+        var handler = new RecordingHttpMessageHandler();
+        using var httpClient = new HttpClient(handler);
+        var service = CreateService(httpClient);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.RefundCheckoutAsync("checkout_test_123", 20m, "DIBA-REFUND-0002", idempotencyKey));
+
+        Assert.Empty(handler.RequestUris);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
     public async Task RefundRequestRejectsMissingCheckoutId(string checkoutId)
     {
         var handler = new RecordingHttpMessageHandler();
