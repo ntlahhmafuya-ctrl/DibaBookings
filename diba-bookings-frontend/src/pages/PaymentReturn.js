@@ -18,6 +18,12 @@ function PaymentReturn({ cancelled = false }) {
     const [errorMessage, setErrorMessage] = useState("");
 
     useEffect(() => {
+        if (!bookingId && !cancelled) {
+            setErrorMessage("The Yoco return link did not include a booking reference. Return to your bookings and ask staff to check the payment before trying again.");
+            setChecking(false);
+            return undefined;
+        }
+
         if (cancelled || !bookingId || !localStorage.getItem("token")) {
             setChecking(false);
             return undefined;
