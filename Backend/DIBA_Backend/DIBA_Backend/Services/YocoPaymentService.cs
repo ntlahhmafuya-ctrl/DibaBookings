@@ -19,7 +19,8 @@ namespace DIBA_Backend.Services
 
         public async Task<YocoCheckoutResponse?> CreateCheckoutAsync(
             decimal amount,
-            string reference)
+            string reference,
+            string idempotencyKey)
         {
             var secretKey = _configuration["Yoco:SecretKey"];
             var successUrl = _configuration["Yoco:SuccessUrl"];
@@ -29,6 +30,12 @@ namespace DIBA_Backend.Services
             {
                 throw new InvalidOperationException(
                     "Yoco secret key is not configured.");
+            }
+
+            if (string.IsNullOrWhiteSpace(idempotencyKey))
+            {
+                throw new ArgumentException(
+                    "A checkout idempotency key is required.", nameof(idempotencyKey));
             }
 
             var amountInCents = (long)Math.Round(
@@ -57,6 +64,11 @@ namespace DIBA_Backend.Services
                 new AuthenticationHeaderValue(
                     "Bearer",
                     secretKey);
+
+            // Reusing the same key for the same booking attempt allows a safe
+            // retry if Yoco created the checkout but DIBA did not save its response.
+            request.Headers.TryAddWithoutValidation(
+                "Idempotency-Key", idempotencyKey);
 
             request.Content = new StringContent(
                 json,
