@@ -10,12 +10,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient<YocoPaymentService>();
 
+// Allow only the local frontend origins used during development.
+// Add the actual frontend origin here if its host or port changes.
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("MyPolicy", builder =>
-        builder.AllowAnyOrigin()
-               .AllowAnyMethod()
-               .AllowAnyHeader());
+    options.AddPolicy("MyPolicy", policy =>
+        policy.WithOrigins(
+                "http://localhost:3000",
+                "https://localhost:3000",
+                "http://127.0.0.1:3000",
+                "https://127.0.0.1:3000")
+              .AllowAnyMethod()
+              .AllowAnyHeader());
 });
 
 builder.Services.AddControllers();
@@ -50,7 +56,6 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "Bearer"
     });
 
-
     // Similar Swagger security requirement logic:
     // tells Swagger that the Bearer token should be used when
     // calling protected endpoints.
@@ -67,30 +72,18 @@ builder.Services.AddSwaggerGen(c =>
             },
             new string[] {}
         }
-    }
-    );
+    });
 });
-
 
 builder.Services.AddDbContext<DIBABookingsDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DbConn")));
 
-
 // Reference: Microsoft Learn, "Configure JWT bearer authentication
 // in ASP.NET Core".
-//
-// Similar logic:
-// 1. Register JWT Bearer as the authentication scheme.
-// 2. Configure token validation.
-// 3. Validate the issuer.
-// 4. Validate the audience.
-// 5. Validate the token lifetime.
-// 6. Validate the signing key.
-//
-// DIBA adaptation: issuer, audience and signing key are read from
-// the DIBA configuration file.
-// https://learn.microsoft.com/en-us/aspnet/core/security/authentication/configure-jwt-bearer-authentication
+// Similar logic: register JWT Bearer and validate issuer, audience,
+// token lifetime, and signing key.
+// DIBA adaptation: values are read from DIBA configuration.
 builder.Services.AddAuthentication(
     JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -116,13 +109,8 @@ builder.Services.AddAuthentication(
             };
     });
 
-
-// Reference: Microsoft Learn, "Role-based authorization in ASP.NET Core".
-// Similar logic: authorization services are registered so that
-// authenticated users can be checked against their roles and claims.
-// DIBA uses this together with [Authorize] and [Authorize(Roles = "...")]
-// throughout the controllers.
-// https://learn.microsoft.com/aspnet/core/security/authorization/roles
+// Role-based authorization is applied by the controllers using
+// [Authorize] and [Authorize(Roles = "...")].
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
@@ -137,21 +125,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-
-// Reference: Microsoft Learn, "Configure JWT bearer authentication
-// in ASP.NET Core".
-//
-// Similar middleware order:
-// UseAuthentication() processes the supplied authentication credentials
-// and establishes the user's identity before authorization is evaluated.
 app.UseAuthentication();
-
-
-// Reference: Microsoft Learn, "Role-based authorization in ASP.NET Core".
-//
-// Similar middleware:
-// UseAuthorization() applies authorization rules after the user has
-// been authenticated.
 app.UseAuthorization();
 
 app.MapControllers();
