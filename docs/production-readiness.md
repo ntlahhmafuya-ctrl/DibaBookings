@@ -2,6 +2,10 @@
 
 This checklist records deployment requirements. A green build is necessary but does not prove the application is safe or ready for live bookings.
 
+## Frontend/API integration
+
+- Review the route-by-route UI/API mapping and manual smoke-test checklist in [`docs/frontend-backend-integration.md`](frontend-backend-integration.md) before release.
+
 ## 1. Secrets and configuration
 
 Configure these in the deployment platform's secret/environment settings, not in source control:
