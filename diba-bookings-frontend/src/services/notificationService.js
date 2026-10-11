@@ -4,3 +4,6 @@ export const getNotifications = () => api.get("/Notifications");
 
 export const markNotificationRead = (notificationId) =>
     api.put(`/Notifications/${notificationId}/read`);
+
+export const markAllNotificationsRead = () =>
+    api.put("/Notifications/read-all");
