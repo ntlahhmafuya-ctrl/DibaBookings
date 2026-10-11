@@ -13,3 +13,7 @@ export const getPayment = (paymentId) =>
 // The API only permits retrying a refund that Yoco explicitly confirmed failed.
 export const retryFailedRefund = (paymentId) =>
     api.post(`/Payments/${paymentId}/refund/retry`);
+
+// Read the latest payment attempt for one of the signed-in organiser's bookings.
+export const getBookingPayment = (bookingId) =>
+    api.get(`/Payments/booking/${bookingId}`);
