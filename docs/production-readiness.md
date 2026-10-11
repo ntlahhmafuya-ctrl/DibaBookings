@@ -51,6 +51,7 @@ The application seeds demo users and sample venue/event data only in Development
 
 - CI must pass backend restore/build and frontend dependency installation/build.
 - Run functional and authorization tests for every role, including attempts to access another organiser's booking, payment, profile, and notifications.
+- Verify login rate limiting returns HTTP 429 after repeated attempts from one client IP, and confirm legitimate users behind shared networks are not unreasonably blocked.
 - Run concurrency tests for overlapping bookings and duplicate payment requests against SQL Server.
 - Complete an end-to-end test using Yoco test credentials and the real webhook endpoint.
 - Record the release commit, migration version, test results, rollback procedure, and release approver.
