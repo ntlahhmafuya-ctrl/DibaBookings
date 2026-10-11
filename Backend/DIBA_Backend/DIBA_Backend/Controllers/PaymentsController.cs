@@ -656,12 +656,6 @@ namespace DIBA_Backend.Controllers
                     return StatusCode(500, "Payment record for this Yoco checkout/reference was not found.");
                 }
 
-                if (payment == null)
-                {
-                    // A 5xx response allows a not-yet-correlated event to be retried.
-                    return StatusCode(500, "Payment record for this Yoco reference was not found.");
-                }
-
                 Notification? notificationToEmail = null;
                 var previousPaymentStatus = payment.PaymentStatus;
 
