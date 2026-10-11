@@ -118,6 +118,11 @@ namespace DIBA_Backend.Controllers
                     EventId = booking.EventId,
                     VenueId = booking.VenueId,
                     BookingStatusId = booking.BookingStatusId,
+                    PaymentStatus = _dbContext.Payments
+                        .Where(payment => payment.BookingId == booking.BookingId)
+                        .OrderByDescending(payment => payment.PaymentDate)
+                        .Select(payment => payment.PaymentStatus)
+                        .FirstOrDefault() ?? "Not started",
 
 
                     AcknowledgementAccepted =
