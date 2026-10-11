@@ -20,11 +20,20 @@ namespace DIBA_Backend.Services
         public async Task<YocoCheckoutResponse?> CreateCheckoutAsync(
             decimal amount,
             string reference,
-            string idempotencyKey)
+            string idempotencyKey,
+            Guid? bookingId = null)
         {
             var secretKey = _configuration["Yoco:SecretKey"];
             var successUrl = _configuration["Yoco:SuccessUrl"];
             var cancelUrl = _configuration["Yoco:CancelUrl"];
+
+            // Yoco returns the customer to these URLs after checkout. Include the
+            // booking ID so the SPA can load the matching payment from the API.
+            if (bookingId.HasValue)
+            {
+                successUrl = AddQueryParameter(successUrl, "bookingId", bookingId.Value.ToString());
+                cancelUrl = AddQueryParameter(cancelUrl, "bookingId", bookingId.Value.ToString());
+            }
 
             if (string.IsNullOrWhiteSpace(secretKey))
             {
@@ -96,6 +105,21 @@ namespace DIBA_Backend.Services
                     });
 
             return result;
+        }
+
+        private static string? AddQueryParameter(string? url, string key, string value)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+            {
+                return url;
+            }
+
+            var builder = new UriBuilder(uri);
+            var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+            query[key] = value;
+            builder.Query = query.ToString();
+            return builder.Uri.ToString();
         }
 
         // Requests a full or partial refund for a completed Yoco checkout.
