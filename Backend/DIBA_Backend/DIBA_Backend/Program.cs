@@ -157,7 +157,7 @@ if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<DIBABookingsDbContext>();
-    await DbSeeder.SeedAsync(dbContext);
+    //await DbSeeder.SeedAsync(dbContext);
 }
 
 app.UseCors("MyPolicy");
