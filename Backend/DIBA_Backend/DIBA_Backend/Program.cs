@@ -8,6 +8,28 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Fail early when required JWT settings are missing or unsafe.
+// Keep the signing key in User Secrets during development or in a secure
+// environment variable (Jwt__Key) outside development; never commit it.
+var jwtKey = builder.Configuration["Jwt:Key"];
+var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+var jwtAudience = builder.Configuration["Jwt:Audience"];
+
+if (string.IsNullOrWhiteSpace(jwtKey) ||
+    Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "JWT signing key is missing or too short. Configure Jwt:Key using " +
+        "User Secrets or the Jwt__Key environment variable with at least 32 bytes.");
+}
+
+if (string.IsNullOrWhiteSpace(jwtIssuer) ||
+    string.IsNullOrWhiteSpace(jwtAudience))
+{
+    throw new InvalidOperationException(
+        "JWT issuer and audience must both be configured.");
+}
+
 builder.Services.AddHttpClient<YocoPaymentService>();
 
 // Allow only the local frontend origins used during development.
@@ -97,15 +119,15 @@ builder.Services.AddAuthentication(
                 ValidateIssuerSigningKey = true,
 
                 ValidIssuer =
-                    builder.Configuration["Jwt:Issuer"],
+                    jwtIssuer,
 
                 ValidAudience =
-                    builder.Configuration["Jwt:Audience"],
+                    jwtAudience,
 
                 IssuerSigningKey =
                     new SymmetricSecurityKey(
                         Encoding.UTF8.GetBytes(
-                            builder.Configuration["Jwt:Key"]))
+                            jwtKey))
             };
     });
 
