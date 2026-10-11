@@ -7,6 +7,7 @@ using DIBA_Backend.Models.Entities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -68,6 +69,80 @@ public class AccountSecurityTests
 
         var response = await client.GetAsync("/api/Users/me");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OverlappingBookingForSameVenueIsRejected()
+    {
+        using var factory = new DibaApiFactory();
+        using var client = factory.CreateClient();
+        var userId = await SeedUserAsync(factory);
+
+        var venueId = Guid.NewGuid();
+        var eventId = Guid.NewGuid();
+        var pendingStatusId = Guid.NewGuid();
+        var start = DateTime.UtcNow.Date.AddDays(10).AddHours(9);
+        var end = start.AddHours(2);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DIBABookingsDbContext>();
+            db.Venues.Add(new Venue
+            {
+                VenueId = venueId,
+                VenueName = "Integration Test Venue",
+                VenueDescription = "Test-only venue",
+                Capacity = 30,
+                Price = 1000m,
+                Location = "Test",
+                Latitude = 0,
+                Longitude = 0,
+                VenueStatus = "Available"
+            });
+            db.Events.Add(new Event
+            {
+                EventId = eventId,
+                EventName = "Integration Test Event",
+                EventDescription = "Test-only event",
+                StartDateTime = start,
+                EndDateTime = end,
+                VenueId = venueId,
+                UserId = userId
+            });
+            db.BookingStatuses.Add(new BookingStatus
+            {
+                BookingStatusId = pendingStatusId,
+                StatusName = "Pending"
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var token = await LoginAsync(client, OriginalPassword);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var bookingPayload = new
+        {
+            EventId = eventId,
+            VenueId = venueId,
+            StartDateTime = start,
+            EndDateTime = end,
+            SpecialRequirements = "Integration test",
+            AcknowledgementAccepted = true
+        };
+
+        var firstResponse = await client.PostAsJsonAsync("/api/Bookings", bookingPayload);
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+
+        var overlappingResponse = await client.PostAsJsonAsync("/api/Bookings", new
+        {
+            EventId = eventId,
+            VenueId = venueId,
+            StartDateTime = start.AddMinutes(30),
+            EndDateTime = end.AddMinutes(30),
+            SpecialRequirements = "Overlapping integration test",
+            AcknowledgementAccepted = true
+        });
+        Assert.Equal(HttpStatusCode.Conflict, overlappingResponse.StatusCode);
     }
 
     [Fact]
@@ -174,7 +249,9 @@ public class AccountSecurityTests
             {
                 services.RemoveAll<DbContextOptions<DIBABookingsDbContext>>();
                 services.AddDbContext<DIBABookingsDbContext>(options =>
-                    options.UseInMemoryDatabase(_databaseName));
+                    options.UseInMemoryDatabase(_databaseName)
+                        .ConfigureWarnings(warnings =>
+                            warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
             });
         }
     }
