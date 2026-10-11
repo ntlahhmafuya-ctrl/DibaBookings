@@ -9,16 +9,16 @@ namespace DIBA_Backend.Dto.User
     public class UpdateUserDto
     {
         [StringLength(80, MinimumLength = 1)]
-        [RegularExpression(@"\S", ErrorMessage = "First name cannot be blank.")]
+        [RegularExpression(@".*\S.*", ErrorMessage = "First name cannot be blank.")]
         public string? FirstName { get; set; }
 
         [StringLength(80, MinimumLength = 1)]
-        [RegularExpression(@"\S", ErrorMessage = "Last name cannot be blank.")]
+        [RegularExpression(@".*\S.*", ErrorMessage = "Last name cannot be blank.")]
         public string? LastName { get; set; }
 
         [EmailAddress]
         [StringLength(320)]
-        [RegularExpression(@"\S", ErrorMessage = "Email cannot be blank.")]
+        [RegularExpression(@".*\S.*", ErrorMessage = "Email cannot be blank.")]
         public string? Email { get; set; }
     }
 }
