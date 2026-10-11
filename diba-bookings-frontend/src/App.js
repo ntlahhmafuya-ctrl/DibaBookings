@@ -12,6 +12,7 @@ import Dashboard from "./pages/dashboards/Dashboard";
 import LandingPage from "./pages/LandingPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Profile from "./pages/Profile";
+import PaymentManagement from "./pages/PaymentManagement";
 
 function App() {
     return (
@@ -44,6 +45,12 @@ function App() {
                 <Route
                     path="/profile"
                     element={<Profile />}
+                />
+
+                {/* STAFF/ADMIN PAYMENT AND REFUND OPERATIONS. */}
+                <Route
+                    path="/payments"
+                    element={<PaymentManagement />}
                 />
             </Routes>
 
