@@ -120,6 +120,12 @@ namespace DIBA_Backend.Services
                     "Yoco checkout ID is required.", nameof(checkoutId));
             }
 
+            if (string.IsNullOrWhiteSpace(idempotencyKey))
+            {
+                throw new ArgumentException(
+                    "A refund idempotency key is required.", nameof(idempotencyKey));
+            }
+
             if (amount <= 0)
             {
                 throw new ArgumentOutOfRangeException(
