@@ -37,7 +37,7 @@ The application seeds demo users and sample venue/event data only in Development
 - Reconcile failed or uncertain refund requests with Yoco before retrying. Do not retry a refund marked `NeedsReview` without checking Yoco's records.
 - Current cancellation logic is a proposed policy: organiser cancellation 7 or more days before the event = full refund; 72 hours to less than 7 days = 50%; less than 72 hours = no refund; DIBA-initiated cancellation = full refund. The responsible organisation must formally approve this policy and display it to users before production.
 - Checkout creation now sends a stable Yoco idempotency key per booking attempt. Verify Yoco's idempotency behaviour in the test environment, especially timeouts after provider-side creation, local database-save failures, simultaneous duplicate requests, and retries after a confirmed failure.
-- Test payment failures, delayed/duplicate webhooks, webhook signature failures, duplicate checkout attempts, partial refunds, and Yoco timeouts.
+- Test payment failures, delayed/duplicate webhooks, webhook signature failures, duplicate checkout attempts, partial refunds, and Yoco timeouts. See [`docs/payment-testing.md`](payment-testing.md) for automated coverage, commands, limitations, and the manual sandbox test plan.
 
 ## 4. Privacy, email, and operational controls
 
