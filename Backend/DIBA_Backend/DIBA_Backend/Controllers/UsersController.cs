@@ -184,6 +184,18 @@ namespace DIBA_Backend.Controllers
                 })
                 .ToListAsync();
 
+            var emailDeliveryLogs = await _dbContext.EmailDeliveryLogs
+                .AsNoTracking()
+                .Where(item => item.UserId == userGuid)
+                .Select(item => new
+                {
+                    item.Subject,
+                    item.Status,
+                    item.AttemptedAtUtc,
+                    item.SentAtUtc
+                })
+                .ToListAsync();
+
             var export = new
             {
                 ExportedAtUtc = DateTime.UtcNow,
@@ -200,7 +212,8 @@ namespace DIBA_Backend.Controllers
                 Events = events,
                 Bookings = bookings,
                 Notifications = notifications,
-                PrivacyRequests = privacyRequests
+                PrivacyRequests = privacyRequests,
+                EmailDeliveryLogs = emailDeliveryLogs
             };
 
             return Ok(export);
