@@ -48,7 +48,7 @@ namespace DIBA_Backend.Controllers
 
             if (existingUser != null)
             {
-                return BadRequest("A user with this email already exists.");
+                return Conflict("A user with this email already exists.");
             }
 
 
