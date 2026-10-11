@@ -215,54 +215,32 @@ namespace DIBA_Backend.Controllers
         // Similar logic: limiting an operation to a specific application role.
         // DIBA adaptation: only Event Organisers can create payment records
         // for their own approved bookings.
+
         [Authorize(Roles = "Event Organiser")]
         public async Task<IActionResult> CreatePayment(
-            CreatePaymentDto createPaymentDto)
+    CreatePaymentDto createPaymentDto)
         {
-            // Reference: Microsoft Learn, "Claims-based authorization
-            // in ASP.NET Core".
-            // Similar logic: identifying the authenticated user using
-            // a claim.
-            // DIBA adaptation: the UserId is used to verify ownership
-            // of the booking being paid for.
-            var userIdClaim =
-                User.FindFirst(ClaimTypes.NameIdentifier);
+            // Identify the logged-in organiser.
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
 
-            if (userIdClaim == null)
+            if (userIdClaim == null ||
+                !Guid.TryParse(userIdClaim.Value, out Guid userId))
             {
-                return Unauthorized(
-                    "User ID could not be determined.");
+                return Unauthorized("User ID could not be determined or is invalid.");
             }
 
-            if (!Guid.TryParse(
-                    userIdClaim.Value,
-                    out Guid userId))
-            {
-                return Unauthorized("Invalid user ID.");
-            }
-
-
-            // Reference: JedAngelo, "ConferenceBookingApi".
-            // Similar domain logic: retrieving a booking together with
-            // its status so that the booking workflow can determine
-            // what operations are currently allowed.
-            // DIBA adaptation: the payment operation depends on the
-            // booking status.
+            // Load the booking and the information required for validation.
             var booking = await dbContext.Bookings
                 .Include(b => b.BookingStatus)
                 .Include(b => b.Venue)
                 .FirstOrDefaultAsync(
-                    b => b.BookingId ==
-                         createPaymentDto.BookingId);
+                    b => b.BookingId == createPaymentDto.BookingId);
 
             if (booking == null)
             {
                 return NotFound("Booking not found.");
             }
 
-            // DIBA-specific ownership rule:
-            // the Event Organiser can only create a payment for their
-            // own booking.
             if (booking.UserId != userId)
             {
                 return Forbid();
@@ -270,17 +248,9 @@ namespace DIBA_Backend.Controllers
 
             if (booking.BookingStatus == null)
             {
-                return StatusCode(
-                    500,
-                    "Booking status could not be determined.");
+                return StatusCode(500, "Booking status could not be determined.");
             }
 
-            // Reference: JedAngelo, "ConferenceBookingApi".
-            // Similar logic: booking status controls what actions can
-            // be performed on a booking.
-            //
-            // DIBA adaptation: a payment may only be recorded after
-            // the booking has reached the Approved state.
             if (!booking.BookingStatus.StatusName.Equals(
                     "Approved",
                     StringComparison.OrdinalIgnoreCase))
@@ -289,51 +259,153 @@ namespace DIBA_Backend.Controllers
                     "Payment can only be made for an approved booking.");
             }
 
-            // Make sure the booking has a venue.
             if (booking.Venue == null)
             {
-                return BadRequest(
-                    "The booking does not have a venue.");
+                return BadRequest("The booking does not have a venue.");
             }
 
-            // Get the payment amount from the venue.
             var amount = booking.Venue.Price;
 
             if (amount <= 0)
             {
-                return BadRequest(
-                    "The venue does not have a valid price.");
+                return BadRequest("The venue does not have a valid price.");
             }
 
-            // Check if payment already exists.
-            // DIBA adaptation: each booking is restricted to one
-            // payment record.
-            var existingPayment = await dbContext.Payments
+            // Check whether this booking already has an active payment.
+            // A Pending attempt can be resumed using its original reference
+            // and idempotency key. Other active statuses must not create a
+            // second payment attempt.
+            var payment = await dbContext.Payments
                 .FirstOrDefaultAsync(p =>
-                    p.BookingId == createPaymentDto.BookingId &&
+                    p.BookingId == booking.BookingId &&
                     p.PaymentStatus != "Failed");
 
-            if (existingPayment != null)
+            string referenceNumber;
+            string checkoutIdempotencyKey;
+
+            if (payment != null)
             {
-                return Conflict(
-                    "A payment already exists for this booking.");
+                if (!payment.PaymentStatus.Equals(
+                        "Pending",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return Conflict(
+                        "A payment already exists for this booking.");
+                }
+
+                // Only references created using the current format can be
+                // safely resumed automatically.
+                var referencePrefix = $"DIBA-{booking.BookingId:N}-";
+
+                if (string.IsNullOrWhiteSpace(payment.ReferenceNumber) ||
+                    !payment.ReferenceNumber.StartsWith(
+                        referencePrefix,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return Conflict(
+                        "An existing payment attempt needs staff review. " +
+                        "Please contact DIBA before trying again.");
+                }
+
+                var attemptSuffix = payment.ReferenceNumber[
+                    referencePrefix.Length..];
+
+                if (!int.TryParse(
+                        attemptSuffix,
+                        NumberStyles.None,
+                        CultureInfo.InvariantCulture,
+                        out var attemptNumber) ||
+                    attemptNumber < 1)
+                {
+                    return Conflict(
+                        "The existing payment reference is invalid. " +
+                        "Please contact DIBA staff.");
+                }
+
+                referenceNumber = payment.ReferenceNumber;
+
+                checkoutIdempotencyKey =
+                    $"diba-checkout-{booking.BookingId:N}-" +
+                    attemptNumber.ToString(
+                        "D4",
+                        CultureInfo.InvariantCulture);
+
+                // Keep the amount originally reserved for this attempt.
+                // This also keeps a repeated Yoco request consistent.
+                amount = payment.Amount;
+            }
+            else
+            {
+                // Determine the next attempt number.
+                var failedAttemptCount = await dbContext.Payments
+                    .AsNoTracking()
+                    .CountAsync(p =>
+                        p.BookingId == booking.BookingId &&
+                        p.PaymentStatus == "Failed");
+
+                var attemptNumber = failedAttemptCount + 1;
+
+                var attemptSuffix = attemptNumber.ToString(
+                    "D4",
+                    CultureInfo.InvariantCulture);
+
+                referenceNumber =
+                    $"DIBA-{booking.BookingId:N}-{attemptSuffix}";
+
+                checkoutIdempotencyKey =
+                    $"diba-checkout-{booking.BookingId:N}-{attemptSuffix}";
+
+                // IMPORTANT: reserve the payment slot in the database
+                // BEFORE making an external request to Yoco.
+                payment = new Payment
+                {
+                    PaymentId = Guid.NewGuid(),
+                    Amount = amount,
+                    PaymentDate = DateTime.UtcNow,
+                    ReferenceNumber = referenceNumber,
+                    YocoCheckoutId = null,
+                    PaymentStatus = "Pending",
+                    BookingId = booking.BookingId
+                };
+
+                dbContext.Payments.Add(payment);
+
+                try
+                {
+                    await dbContext.SaveChangesAsync();
+                }
+                catch (DbUpdateException exception)
+                {
+                    // The unique filtered index prevents two active
+                    // payment records for the same booking.
+                    var anotherActivePaymentExists =
+                        await dbContext.Payments
+                            .AsNoTracking()
+                            .AnyAsync(p =>
+                                p.BookingId == booking.BookingId &&
+                                p.PaymentStatus != "Failed");
+
+                    if (anotherActivePaymentExists)
+                    {
+                        return Conflict(
+                            "A payment attempt already exists for this booking. " +
+                            "Please refresh and check its status.");
+                    }
+
+                    logger.LogError(
+                        exception,
+                        "Could not reserve a payment for booking {BookingId}.",
+                        booking.BookingId);
+
+                    return StatusCode(
+                        500,
+                        "The payment reservation could not be saved. " +
+                        "Please contact DIBA staff before retrying.");
+                }
             }
 
-            // Count confirmed failed attempts so retries use a new key only
-            // after Yoco has recorded the previous attempt as failed.
-            // If a checkout was created remotely but the local save failed,
-            // the same booking/attempt pair produces the same Yoco idempotency key.
-            var failedAttemptCount = await dbContext.Payments
-                .AsNoTracking()
-                .CountAsync(payment =>
-                    payment.BookingId == booking.BookingId &&
-                    payment.PaymentStatus == "Failed");
-
-            var attemptNumber = failedAttemptCount + 1;
-            var attemptSuffix = attemptNumber.ToString("D4", CultureInfo.InvariantCulture);
-            var referenceNumber = $"DIBA-{booking.BookingId:N}-{attemptSuffix}";
-            var checkoutIdempotencyKey = $"diba-checkout-{booking.BookingId:N}-{attemptSuffix}";
-
+            // Create or recover the Yoco checkout using the same idempotency
+            // key for this payment attempt.
             YocoCheckoutResponse? checkout;
 
             try
@@ -344,63 +416,101 @@ namespace DIBA_Backend.Controllers
                     checkoutIdempotencyKey,
                     booking.BookingId);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                logger.LogError(ex, "Yoco checkout creation failed for booking {BookingId}.",
-                    createPaymentDto.BookingId);
+                logger.LogError(
+                    exception,
+                    "Yoco checkout creation or recovery failed for booking {BookingId}, " +
+                    "payment {PaymentId}.",
+                    booking.BookingId,
+                    payment.PaymentId);
 
+                // Do NOT mark this payment Failed automatically.
+                // Yoco may have created the checkout despite a timeout.
+                // A retry can reuse the same reservation and idempotency key.
                 return StatusCode(
                     502,
-                    new { message = "Unable to create Yoco checkout. Please try again later." });
+                    new
+                    {
+                        message =
+                            "The checkout could not be confirmed. " +
+                            "Your payment attempt has been retained. " +
+                            "Please retry to recover the checkout or contact DIBA staff."
+                    });
             }
 
             if (checkout == null ||
                 string.IsNullOrWhiteSpace(checkout.Id) ||
                 string.IsNullOrWhiteSpace(checkout.RedirectUrl))
             {
+                // Retain the reservation because the outcome may be uncertain.
                 return StatusCode(
                     502,
-                    "Yoco did not return a valid checkout.");
+                    new
+                    {
+                        message =
+                            "Yoco did not return a complete checkout response. " +
+                            "The payment attempt has been retained for recovery."
+                    });
             }
 
-            // DIBA-specific payment creation.
-            // A unique identifier and UTC timestamp are assigned when
-            // the payment record is created.
-            var payment = new Payment
+            // Never replace an already recorded checkout ID with a different one.
+            if (!string.IsNullOrWhiteSpace(payment.YocoCheckoutId) &&
+                !string.Equals(
+                    payment.YocoCheckoutId,
+                    checkout.Id,
+                    StringComparison.Ordinal))
             {
-                PaymentId = Guid.NewGuid(),
-                Amount = amount,
-                PaymentDate = DateTime.UtcNow,
-                ReferenceNumber = referenceNumber,
-                YocoCheckoutId = checkout.Id,
-                PaymentStatus = "Pending",
-                BookingId = booking.BookingId
-            };
+                logger.LogError(
+                    "Yoco returned a different checkout ID for payment {PaymentId}. " +
+                    "Stored checkout: {StoredCheckoutId}; returned checkout: {ReturnedCheckoutId}.",
+                    payment.PaymentId,
+                    payment.YocoCheckoutId,
+                    checkout.Id);
 
-            dbContext.Payments.Add(payment);
-
-            try
-            {
-                await dbContext.SaveChangesAsync();
+                return StatusCode(
+                    502,
+                    new
+                    {
+                        message =
+                            "The checkout could not be safely matched to the existing " +
+                            "payment attempt. Please contact DIBA staff."
+                    });
             }
-            catch (DbUpdateException exception)
-            {
-                var anotherActivePaymentExists = await dbContext.Payments
-                    .AsNoTracking()
-                    .AnyAsync(existing =>
-                        existing.BookingId == payment.BookingId &&
-                        existing.PaymentStatus != "Failed");
 
-                if (anotherActivePaymentExists)
+            // Save the checkout ID only after Yoco returns a valid response.
+            if (string.IsNullOrWhiteSpace(payment.YocoCheckoutId))
+            {
+                payment.YocoCheckoutId = checkout.Id;
+
+                try
                 {
-                    return Conflict("A pending or successful payment already exists for this booking.");
+                    await dbContext.SaveChangesAsync();
                 }
+                catch (Exception exception)
+                {
+                    logger.LogError(
+                        exception,
+                        "Yoco created checkout {CheckoutId}, but DIBA could not " +
+                        "save it for payment {PaymentId}.",
+                        checkout.Id,
+                        payment.PaymentId);
 
-                logger.LogError(exception, "Could not save payment record for booking {BookingId}.",
-                    payment.BookingId);
-                return StatusCode(500, "The payment record could not be saved. Contact DIBA staff before retrying.");
+                    // Leave the reservation in place. Retrying with the same
+                    // idempotency key can recover the original checkout.
+                    return StatusCode(
+                        500,
+                        new
+                        {
+                            message =
+                                "The checkout was created, but DIBA could not " +
+                                "finish saving its details. Please retry to recover " +
+                                "the checkout or contact DIBA staff."
+                        });
+                }
             }
 
+            // Preserve the response fields expected by the existing frontend.
             return Ok(new
             {
                 paymentId = payment.PaymentId,
@@ -413,6 +523,7 @@ namespace DIBA_Backend.Controllers
                 checkoutUrl = checkout.RedirectUrl
             });
         }
+
 
         // POST: api/Payments/{id}/refund/retry
         // Only staff/administrators may retry a refund that Yoco explicitly marked failed.
