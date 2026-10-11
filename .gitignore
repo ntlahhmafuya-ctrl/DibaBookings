@@ -1,3 +1,17 @@
+# Visual Studio and .NET build output
 .vs/
+**/.vs/
 bin/
+**/bin/
 obj/
+**/obj/
+
+# JavaScript dependencies and build output
+node_modules/
+**/node_modules/
+build/
+**/build/
+
+# Local environment files; keep .env.example templates tracked
+.env
+**/.env
