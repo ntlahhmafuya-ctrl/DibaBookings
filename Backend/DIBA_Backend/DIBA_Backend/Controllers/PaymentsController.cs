@@ -268,9 +268,20 @@ namespace DIBA_Backend.Controllers
                     "A payment already exists for this booking.");
             }
 
-            // Generate DIBA payment reference.
-            var referenceNumber =
-                $"DIBA-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}";
+            // Count confirmed failed attempts so retries use a new key only
+            // after Yoco has recorded the previous attempt as failed.
+            // If a checkout was created remotely but the local save failed,
+            // the same booking/attempt pair produces the same Yoco idempotency key.
+            var failedAttemptCount = await dbContext.Payments
+                .AsNoTracking()
+                .CountAsync(payment =>
+                    payment.BookingId == booking.BookingId &&
+                    payment.PaymentStatus == "Failed");
+
+            var attemptNumber = failedAttemptCount + 1;
+            var attemptSuffix = attemptNumber.ToString("D4", CultureInfo.InvariantCulture);
+            var referenceNumber = $"DIBA-{booking.BookingId:N}-{attemptSuffix}";
+            var checkoutIdempotencyKey = $"diba-checkout-{booking.BookingId:N}-{attemptSuffix}";
 
             YocoCheckoutResponse? checkout;
 
@@ -278,7 +289,8 @@ namespace DIBA_Backend.Controllers
             {
                 checkout = await yocoPaymentService.CreateCheckoutAsync(
                     amount,
-                    referenceNumber);
+                    referenceNumber,
+                    checkoutIdempotencyKey);
             }
             catch (Exception ex)
             {
