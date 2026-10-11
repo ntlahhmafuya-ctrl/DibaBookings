@@ -28,6 +28,8 @@
 
         public string StatusName { get; set; } = string.Empty;
 
+        public string PaymentStatus { get; set; } = "Not started";
+
         public string OrganiserName { get; set; } = string.Empty;
 
         public string EventName { get; set; } = string.Empty;
