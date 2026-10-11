@@ -183,7 +183,7 @@ public class YocoPaymentServiceTests
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            RequestUris.Add(request.RequestUri?.ToString() ?? string.Empty);
+            RequestUris.Add(request.RequestUri?.AbsoluteUri ?? string.Empty);
             IdempotencyKeys.Add(
                 request.Headers.TryGetValues("Idempotency-Key", out var values)
                     ? values.Single()
