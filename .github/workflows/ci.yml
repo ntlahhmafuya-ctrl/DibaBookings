@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, "feature/**", "fix/**"]
 
+concurrency:
+  group: diba-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
     name: Build ASP.NET Core API
