@@ -1,8 +1,10 @@
 import axios from "axios";
 
 // API CLIENT: centralises the backend URL and JSON defaults for frontend requests.
+const configuredApiBaseUrl = process.env.REACT_APP_API_BASE_URL || "https://localhost:7054/api";
+
 const api = axios.create({
-    baseURL: "https://localhost:7054/api",
+    baseURL: configuredApiBaseUrl,
     headers: {
         "Content-Type": "application/json",
     },

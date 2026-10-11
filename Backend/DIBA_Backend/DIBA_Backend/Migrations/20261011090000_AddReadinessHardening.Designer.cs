@@ -3,6 +3,7 @@ using System;
 using DIBA_Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -11,9 +12,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DIBA_Backend.Migrations
 {
     [DbContext(typeof(DIBABookingsDbContext))]
-    partial class DIBABookingsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261011090000_AddReadinessHardening")]
+    partial class AddReadinessHardening
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
