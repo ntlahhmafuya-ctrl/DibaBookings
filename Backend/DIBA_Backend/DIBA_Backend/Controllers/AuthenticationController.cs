@@ -3,6 +3,7 @@ using DIBA_Backend.Dto.Authentication;
 using DIBA_Backend.Models.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -113,6 +114,7 @@ namespace DIBA_Backend.Controllers
 
 
         [AllowAnonymous]
+        [EnableRateLimiting("login")]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto loginDto)
         {
