@@ -37,6 +37,8 @@ function OrganizerDashboard() {
         cancelBooking,
         editBooking,
         markRead,
+        markAllRead,
+        markingAllRead,
         payForBooking,
         venues,
         events,
@@ -208,6 +210,8 @@ function OrganizerDashboard() {
                     <NotificationsView
                         notifications={notifications}
                         onRead={markRead}
+                        onReadAll={markAllRead}
+                        markingAllRead={markingAllRead}
                         onOpenBooking={(id) => {
                             const booking =
                                 bookings.find(
