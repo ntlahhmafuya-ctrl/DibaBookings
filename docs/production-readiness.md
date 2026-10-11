@@ -24,8 +24,9 @@ Do not deploy with localhost URLs, demo credentials, a missing JWT key, or wildc
 4. Check for more than one non-failed payment per booking before applying the active-payment constraint.
 5. Apply migrations as a controlled deployment step from the backend project directory:
    `dotnet ef database update --project Backend/DIBA_Backend/DIBA_Backend/DIBA_Backend.csproj`
-6. Verify migration history, reference roles/statuses, and venue data. Demo users and sample bookings must never be seeded into production.
-7. Deploy the API and verify `/health`, login, registration, booking operations, and payment webhooks in the correct environment.
+6. Verify migration history and reference roles/statuses. Demo users and sample bookings must never be seeded into production.
+7. Provision the first production Administrator through an approved, audited out-of-band process after migrations. The Development-only demo administrator is not created in production, and there is intentionally no public administrator-bootstrap endpoint.
+8. Deploy the API and verify `/health`, database connectivity, login, registration, booking operations, and payment webhooks in the correct environment.
 
 The application seeds demo users and sample venue/event data only in Development. Production database migrations are not automatically run at API startup.
 
