@@ -6,15 +6,18 @@ namespace DIBA_Backend.Dto.Authentication
     {
         [Required]
         [StringLength(100, MinimumLength = 1)]
+        [RegularExpression(@".*\S.*", ErrorMessage = "First name cannot be blank.")]
         public required string FirstName { get; set; }
 
         [Required]
         [StringLength(100, MinimumLength = 1)]
+        [RegularExpression(@".*\S.*", ErrorMessage = "Last name cannot be blank.")]
         public required string LastName { get; set; }
 
         [Required]
         [EmailAddress]
         [StringLength(254)]
+        [RegularExpression(@".*\S.*", ErrorMessage = "Email cannot be blank.")]
         public required string Email { get; set; }
 
         [Required]
