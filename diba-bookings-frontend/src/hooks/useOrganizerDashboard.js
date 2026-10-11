@@ -50,7 +50,7 @@ const blankBooking = {
 };
 
 function useOrganizerDashboard() {
-    const [view, setView] = useState("dashboard");
+    const [view, setView] = useState(() => new URLSearchParams(window.location.search).get("view") || "dashboard");
     const [drawerOpen, setDrawerOpen] = useState(false);
 
     const [venues, setVenues] = useState([]);
@@ -149,6 +149,14 @@ function useOrganizerDashboard() {
         }
     }, []);
 
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("paymentStatus") === "succeeded") {
+            toast.success("Payment successful. Your booking payment status has been updated.");
+            window.history.replaceState({}, "", window.location.pathname);
+        }
+    }, []);
 
     useEffect(() => {
         loadData();
