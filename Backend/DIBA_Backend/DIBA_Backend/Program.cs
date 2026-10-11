@@ -30,6 +30,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddHttpClient<YocoPaymentService>();
+builder.Services.AddHttpClient("Brevo");
 builder.Services.AddScoped<NotificationEmailService>();
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks()
