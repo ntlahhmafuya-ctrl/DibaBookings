@@ -72,6 +72,81 @@ public class AccountSecurityTests
     }
 
     [Fact]
+    public async Task ExistingActivePaymentBlocksAnotherCheckoutRequest()
+    {
+        using var factory = new DibaApiFactory();
+        using var client = factory.CreateClient();
+        var userId = await SeedUserAsync(factory);
+
+        var venueId = Guid.NewGuid();
+        var eventId = Guid.NewGuid();
+        var bookingId = Guid.NewGuid();
+        var approvedStatusId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DIBABookingsDbContext>();
+            db.Venues.Add(new Venue
+            {
+                VenueId = venueId,
+                VenueName = "Payment Test Venue",
+                VenueDescription = "Test-only venue",
+                Capacity = 20,
+                Price = 750m,
+                Location = "Test",
+                Latitude = 0,
+                Longitude = 0,
+                VenueStatus = "Available"
+            });
+            db.Events.Add(new Event
+            {
+                EventId = eventId,
+                EventName = "Payment Test Event",
+                EventDescription = "Test-only event",
+                StartDateTime = DateTime.UtcNow.Date.AddDays(10).AddHours(9),
+                EndDateTime = DateTime.UtcNow.Date.AddDays(10).AddHours(11),
+                VenueId = venueId,
+                UserId = userId
+            });
+            db.BookingStatuses.Add(new BookingStatus
+            {
+                BookingStatusId = approvedStatusId,
+                StatusName = "Approved"
+            });
+            db.Bookings.Add(new Booking
+            {
+                BookingId = bookingId,
+                BookingDate = DateTime.UtcNow,
+                StartDateTime = DateTime.UtcNow.Date.AddDays(10).AddHours(9),
+                EndDateTime = DateTime.UtcNow.Date.AddDays(10).AddHours(11),
+                UserId = userId,
+                EventId = eventId,
+                VenueId = venueId,
+                BookingStatusId = approvedStatusId,
+                AcknowledgementAccepted = true,
+                AcknowledgementAcceptedAt = DateTime.UtcNow
+            });
+            db.Payments.Add(new Payment
+            {
+                PaymentId = Guid.NewGuid(),
+                Amount = 750m,
+                PaymentDate = DateTime.UtcNow,
+                ReferenceNumber = "DIBA-TEST-EXISTING",
+                YocoCheckoutId = "checkout_existing_test",
+                PaymentStatus = "Pending",
+                BookingId = bookingId
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var token = await LoginAsync(client, OriginalPassword);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.PostAsJsonAsync("/api/Payments", new { BookingId = bookingId });
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
     public async Task OverlappingBookingForSameVenueIsRejected()
     {
         using var factory = new DibaApiFactory();
