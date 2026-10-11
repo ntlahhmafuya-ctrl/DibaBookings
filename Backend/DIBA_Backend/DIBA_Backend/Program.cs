@@ -277,3 +277,6 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.MapHealthChecks("/health");
 
 app.Run();
+
+// Expose the top-level entry point to the integration-test host.
+public partial class Program { }
