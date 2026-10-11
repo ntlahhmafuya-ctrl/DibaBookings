@@ -27,6 +27,22 @@ public class YocoPaymentServiceTests
     }
 
     [Fact]
+    public async Task CheckoutReturnUrlsIncludeBookingIdForFrontendStatusLookup()
+    {
+        var handler = new RecordingHttpMessageHandler();
+        using var httpClient = new HttpClient(handler);
+        var service = CreateService(httpClient);
+        var bookingId = Guid.Parse("f9b7d8ab-09d4-44c8-87c1-cf7a0f123456");
+
+        await service.CreateCheckoutAsync(
+            125m, "DIBA-TEST-RETURN", "diba-checkout-return-test", bookingId);
+
+        var body = Assert.Single(handler.RequestBodies);
+        Assert.Contains($"https://example.test/success?bookingId={bookingId}", body);
+        Assert.Contains($"https://example.test/cancel?bookingId={bookingId}", body);
+    }
+
+    [Fact]
     public async Task CheckoutRequestRejectsMissingIdempotencyKeyBeforeSendingRequest()
     {
         var handler = new RecordingHttpMessageHandler();
