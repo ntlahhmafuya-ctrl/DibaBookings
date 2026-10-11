@@ -49,7 +49,9 @@ The application seeds demo users and sample venue/event data only in Development
 
 ## 5. Release verification
 
-- CI must pass backend restore/build and frontend dependency installation/build.
+- CI must pass backend restore/build, backend integration tests, and frontend dependency installation/build.
+- Backend integration tests must verify that changing a password invalidates the old JWT, a new login succeeds with the new password, and deactivating an account invalidates its existing JWT.
+- JWT validation now checks current account activation and a password-hash fingerprint on each authenticated request. This provides immediate revocation without a schema migration, but adds a database lookup to authenticated requests; monitor latency and database load.
 - Run functional and authorization tests for every role, including attempts to access another organiser's booking, payment, profile, and notifications.
 - Verify login rate limiting returns HTTP 429 after repeated attempts from one client IP, and confirm legitimate users behind shared networks are not unreasonably blocked.
 - Run concurrency tests for overlapping bookings and duplicate payment requests against SQL Server.
