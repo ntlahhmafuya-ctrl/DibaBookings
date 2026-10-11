@@ -87,6 +87,20 @@ function StaffDashboard() {
 
     useEffect(() => {
         loadData();
+
+        // Payment webhooks update the database asynchronously. Refresh the
+        // booking/payment status while the staff dashboard remains open.
+        const refreshBookingStatuses = async () => {
+            try {
+                const response = await getBookings();
+                setBookings(Array.isArray(response.data) ? response.data : []);
+            } catch {
+                // Keep the last displayed data if a background refresh fails.
+            }
+        };
+
+        const intervalId = window.setInterval(refreshBookingStatuses, 8000);
+        return () => window.clearInterval(intervalId);
     }, []);
 
     const reviewBooking = async (booking, action) => {
