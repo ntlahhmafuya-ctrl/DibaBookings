@@ -157,6 +157,57 @@ namespace DIBA_Backend.Controllers
             return Ok(response);
         }
 
+        // GET: api/Payments/booking/{bookingId}
+        // Returns the most recent payment attempt for a booking the caller owns.
+        [HttpGet("booking/{bookingId:guid}")]
+        [Authorize(Roles = "Event Organiser")]
+        public async Task<IActionResult> GetBookingPayment(Guid bookingId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized("User ID could not be determined.");
+            }
+
+            var booking = await dbContext.Bookings
+                .AsNoTracking()
+                .FirstOrDefaultAsync(item => item.BookingId == bookingId && item.UserId == userId);
+
+            if (booking == null)
+            {
+                return NotFound("Booking not found.");
+            }
+
+            var payment = await dbContext.Payments
+                .AsNoTracking()
+                .Where(item => item.BookingId == bookingId)
+                .OrderByDescending(item => item.PaymentDate)
+                .Select(item => new PaymentResponseDto
+                {
+                    PaymentId = item.PaymentId,
+                    Amount = item.Amount,
+                    PaymentDate = item.PaymentDate,
+                    ReferenceNumber = item.ReferenceNumber,
+                    BookingId = item.BookingId,
+                    PaymentStatus = item.PaymentStatus,
+                    RefundAmount = item.RefundAmount,
+                    RefundReason = item.RefundReason,
+                    RefundStatus = item.RefundStatus,
+                    RefundRequestedAtUtc = item.RefundRequestedAtUtc,
+                    RefundProcessedAtUtc = item.RefundProcessedAtUtc,
+                    YocoRefundId = item.YocoRefundId,
+                    RefundFailureReason = item.RefundFailureReason
+                })
+                .FirstOrDefaultAsync();
+
+            if (payment == null)
+            {
+                return NotFound("No payment attempt was found for this booking.");
+            }
+
+            return Ok(payment);
+        }
+
         // POST: api/Payments
         [HttpPost]
 
@@ -290,7 +341,8 @@ namespace DIBA_Backend.Controllers
                 checkout = await yocoPaymentService.CreateCheckoutAsync(
                     amount,
                     referenceNumber,
-                    checkoutIdempotencyKey);
+                    checkoutIdempotencyKey,
+                    booking.BookingId);
             }
             catch (Exception ex)
             {
@@ -547,26 +599,62 @@ namespace DIBA_Backend.Controllers
                     return Ok(new { received = true, ignored = true });
                 }
 
-                if (!root.TryGetProperty("payload", out var payload) ||
+                // Yoco webhook payloads use "payload"; accept "data" as well so
+                // a provider envelope variation does not leave a paid checkout Pending.
+                var payload = root.TryGetProperty("payload", out var payloadElement)
+                    ? payloadElement
+                    : root.TryGetProperty("data", out var dataElement)
+                        ? dataElement
+                        : default;
+
+                if (payload.ValueKind != JsonValueKind.Object ||
                     !payload.TryGetProperty("amount", out var amountElement) ||
                     !amountElement.TryGetInt64(out var amountInCents) ||
                     !payload.TryGetProperty("currency", out var currencyElement) ||
-                    !string.Equals(currencyElement.GetString(), "ZAR", StringComparison.OrdinalIgnoreCase) ||
-                    !payload.TryGetProperty("metadata", out var metadata) ||
-                    !metadata.TryGetProperty("reference", out var referenceElement))
+                    !string.Equals(currencyElement.GetString(), "ZAR", StringComparison.OrdinalIgnoreCase))
                 {
-                    return BadRequest("Yoco webhook payload is missing required payment details.");
+                    return BadRequest("Yoco webhook payload is missing required amount or currency.");
                 }
 
-                var referenceNumber = referenceElement.GetString();
-                if (string.IsNullOrWhiteSpace(referenceNumber))
+                string? referenceNumber = null;
+                if (payload.TryGetProperty("metadata", out var metadata) &&
+                    metadata.ValueKind == JsonValueKind.Object &&
+                    metadata.TryGetProperty("reference", out var referenceElement))
                 {
-                    return BadRequest("DIBA payment reference is missing from the Yoco webhook.");
+                    referenceNumber = referenceElement.GetString();
                 }
 
-                var payment = await dbContext.Payments
-                    .Include(p => p.Booking)
-                    .FirstOrDefaultAsync(p => p.ReferenceNumber == referenceNumber);
+                string? checkoutId = null;
+                if (payload.TryGetProperty("checkoutId", out var checkoutIdElement))
+                {
+                    checkoutId = checkoutIdElement.GetString();
+                }
+                if (string.IsNullOrWhiteSpace(checkoutId) &&
+                    payload.TryGetProperty("metadata", out var checkoutMetadata) &&
+                    checkoutMetadata.ValueKind == JsonValueKind.Object &&
+                    checkoutMetadata.TryGetProperty("checkoutId", out var metadataCheckoutId))
+                {
+                    checkoutId = metadataCheckoutId.GetString();
+                }
+
+                var paymentQuery = dbContext.Payments.Include(p => p.Booking).AsQueryable();
+                Payment? payment = null;
+                if (!string.IsNullOrWhiteSpace(referenceNumber))
+                {
+                    payment = await paymentQuery.FirstOrDefaultAsync(
+                        p => p.ReferenceNumber == referenceNumber);
+                }
+
+                if (payment == null && !string.IsNullOrWhiteSpace(checkoutId))
+                {
+                    payment = await paymentQuery.FirstOrDefaultAsync(
+                        p => p.YocoCheckoutId == checkoutId);
+                }
+
+                if (payment == null)
+                {
+                    return StatusCode(500, "Payment record for this Yoco checkout/reference was not found.");
+                }
 
                 if (payment == null)
                 {
