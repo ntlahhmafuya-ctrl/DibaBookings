@@ -16,7 +16,8 @@ import {
 } from "../services/eventService";
 import {
     getNotifications,
-    markNotificationRead
+    markNotificationRead,
+    markAllNotificationsRead
 } from "../services/notificationService";
 import { createPaymentCheckout } from "../services/paymentService";
 import { getVenueFeatures, getVenues } from "../services/venueService";
@@ -72,6 +73,7 @@ function useOrganizerDashboard() {
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [markingAllRead, setMarkingAllRead] = useState(false);
 
 
     const firstName =
@@ -724,6 +726,23 @@ const submitEventAndBooking = async (event) => {
     };
 
 
+    const markAllRead = async () => {
+        if (markingAllRead || unread === 0) return;
+
+        setMarkingAllRead(true);
+        try {
+            await markAllNotificationsRead();
+            setNotifications((current) =>
+                current.map((notification) => ({ ...notification, isRead: true }))
+            );
+        } catch (error) {
+            toast.error(errorText(error, "Could not mark notifications as read."));
+        } finally {
+            setMarkingAllRead(false);
+        }
+    };
+
+
     const payForBooking = async (
         notification
     ) => {
@@ -816,6 +835,8 @@ const submitEventAndBooking = async (event) => {
         cancelBooking,
         editBooking,
         markRead,
+        markAllRead,
+        markingAllRead,
         payForBooking,
         venues,
         events,
