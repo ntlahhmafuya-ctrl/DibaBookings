@@ -13,6 +13,7 @@ import LandingPage from "./pages/LandingPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Profile from "./pages/Profile";
 import PaymentManagement from "./pages/PaymentManagement";
+import PaymentReturn from "./pages/PaymentReturn";
 
 function App() {
     return (
@@ -20,6 +21,10 @@ function App() {
 
             <Routes>
                 <Route path="/" element={<LandingPage />} />
+
+                {/* Yoco returns to these SPA routes after checkout. */}
+                <Route path="/payment/success" element={<PaymentReturn />} />
+                <Route path="/payment/cancel" element={<PaymentReturn cancelled />} />
 
                 <Route
                     path="/login"
