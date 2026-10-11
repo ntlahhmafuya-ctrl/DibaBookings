@@ -232,6 +232,44 @@ public class AccountSecurityTests
             factory.YocoHandler.IdempotencyKeys[1]);
     }
 
+
+    [Fact]
+    public async Task YocoHttpErrorDoesNotMarkPaymentFailedOrReportSuccess()
+    {
+        using var factory = new DibaApiFactory();
+        using var client = factory.CreateClient();
+        var userId = await SeedUserAsync(factory);
+        var bookingId = await SeedApprovedBookingAsync(factory, userId);
+
+        factory.YocoHandler.ResponseFactory = _ =>
+            new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            {
+                Content = new StringContent("Yoco temporarily unavailable.")
+            };
+
+        var token = await LoginAsync(client, OriginalPassword);
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.PostAsJsonAsync(
+            "/api/Payments",
+            new { BookingId = bookingId });
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DIBABookingsDbContext>();
+            var payment = await db.Payments.SingleAsync(
+                item => item.BookingId == bookingId);
+
+            Assert.Equal("Pending", payment.PaymentStatus);
+            Assert.Null(payment.YocoCheckoutId);
+        }
+
+        Assert.Single(factory.YocoHandler.IdempotencyKeys);
+    }
+
     [Fact]
     public async Task OverlappingBookingForSameVenueIsRejected()
     {
