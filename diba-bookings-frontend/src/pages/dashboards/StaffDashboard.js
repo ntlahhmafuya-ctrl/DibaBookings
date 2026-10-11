@@ -359,7 +359,8 @@ function StaffDashboard() {
                                         <th>Event</th>
                                         <th>Organiser</th>
                                         <th>Venue</th>
-                                        <th>Status</th>
+                                        <th>Booking status</th>
+                                        <th>Payment status</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -375,6 +376,16 @@ function StaffDashboard() {
                                                     text="dark"
                                                 >
                                                     {booking.statusName || "Unknown"}
+                                                </Badge>
+                                            </td>
+                                            <td>
+                                                <Badge
+                                                    bg={String(booking.paymentStatus).toLowerCase() === "succeeded" ? "success" : String(booking.paymentStatus).toLowerCase() === "pending" ? "warning" : String(booking.paymentStatus).toLowerCase() === "failed" ? "danger" : "secondary"}
+                                                    text={["Pending", "Not started"].includes(booking.paymentStatus) ? "dark" : undefined}
+                                                >
+                                                    {String(booking.paymentStatus).toLowerCase() === "succeeded"
+                                                        ? "Payment successful"
+                                                        : booking.paymentStatus || "Not started"}
                                                 </Badge>
                                             </td>
                                             <td>
@@ -400,7 +411,7 @@ function StaffDashboard() {
                                         </tr>
                                     ))}
                                     {bookings.length === 0 && (
-                                        <tr><td colSpan={5}>No booking requests found.</td></tr>
+                                        <tr><td colSpan={6}>No booking requests found.</td></tr>
                                     )}
                                 </tbody>
                             </Table>
