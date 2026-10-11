@@ -1,4 +1,5 @@
-﻿using DIBA_Backend.Data;
+﻿using System.Data;
+using DIBA_Backend.Data;
 using DIBA_Backend.Dto.Booking;
 using DIBA_Backend.Models.Entities;
 using DIBA_Backend.Services;
@@ -22,6 +23,7 @@ namespace DIBA_Backend.Controllers
     {
         private readonly DIBABookingsDbContext _dbContext;
         private readonly YocoPaymentService _yocoPaymentService;
+        private readonly NotificationEmailService _notificationEmailService;
 
         // DIBA policy: bookings must be made at least seven calendar days
         // before the event date, using South African local calendar time.
@@ -54,10 +56,12 @@ namespace DIBA_Backend.Controllers
 
         public BookingsController(
             DIBABookingsDbContext dbContext,
-            YocoPaymentService yocoPaymentService)
+            YocoPaymentService yocoPaymentService,
+            NotificationEmailService notificationEmailService)
         {
             _dbContext = dbContext;
             _yocoPaymentService = yocoPaymentService;
+            _notificationEmailService = notificationEmailService;
         }
 
 
@@ -483,6 +487,8 @@ namespace DIBA_Backend.Controllers
             // DIBA adaptation:
             // the check uses VenueId, StartDateTime and EndDateTime and
             // considers Pending and Approved bookings as conflicts.
+            await using var bookingTransaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             var hasConflict = await _dbContext.Bookings
                 .AnyAsync(booking =>
                     booking.VenueId ==
@@ -546,6 +552,7 @@ namespace DIBA_Backend.Controllers
             _dbContext.Bookings.Add(booking);
 
             await _dbContext.SaveChangesAsync();
+            await bookingTransaction.CommitAsync();
 
 
             // DIBA adaptation:
@@ -714,6 +721,8 @@ namespace DIBA_Backend.Controllers
             // Reference: JedAngelo, "ConferenceBookingApi".
             // Similar domain logic: booking updates are subject to
             // conflict checking.
+            await using var bookingTransaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
             var hasConflict = await _dbContext.Bookings
                 .AnyAsync(booking =>
                     booking.BookingId != id &&
@@ -757,6 +766,7 @@ namespace DIBA_Backend.Controllers
                 updateBookingDto.SpecialRequirements;
 
             await _dbContext.SaveChangesAsync();
+            await bookingTransaction.CommitAsync();
 
 
             var response = new BookingResponseDto
@@ -869,7 +879,24 @@ namespace DIBA_Backend.Controllers
                     "This booking cannot be approved because bookings must be made at least 7 calendar days before the event date.");
             }
 
-            // Change the booking status.
+            await using var approvalTransaction =
+                await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+            var approvalConflict = await _dbContext.Bookings.AnyAsync(other =>
+                other.BookingId != booking.BookingId &&
+                other.VenueId == booking.VenueId &&
+                other.StartDateTime < booking.EndDateTime &&
+                other.EndDateTime > booking.StartDateTime &&
+                other.BookingStatus != null &&
+                (other.BookingStatus.StatusName == "Pending" ||
+                 other.BookingStatus.StatusName == "Approved"));
+
+            if (approvalConflict)
+            {
+                return Conflict("This booking overlaps another pending or approved booking for the venue. Resolve the conflict before approving it.");
+            }
+
+            // Change the booking status only after the final overlap check.
             booking.BookingStatusId =
                 approvedStatus.BookingStatusId;
 
@@ -909,6 +936,12 @@ namespace DIBA_Backend.Controllers
             _dbContext.Notifications.Add(notification);
 
             await _dbContext.SaveChangesAsync();
+            await approvalTransaction.CommitAsync();
+            await _notificationEmailService.TrySendAsync(
+                notification.UserId,
+                notification.NotificationId,
+                notification.NotificationType,
+                notification.Message);
 
             return Ok(new
             {
@@ -1057,6 +1090,11 @@ namespace DIBA_Backend.Controllers
             _dbContext.Notifications.Add(notification);
 
             await _dbContext.SaveChangesAsync();
+            await _notificationEmailService.TrySendAsync(
+                notification.UserId,
+                notification.NotificationId,
+                notification.NotificationType,
+                notification.Message);
 
             return Ok(new
             {
@@ -1305,6 +1343,11 @@ namespace DIBA_Backend.Controllers
             // Persist cancellation and refund intent before contacting Yoco.
             // This makes duplicate cancellation requests unable to start a second refund.
             await _dbContext.SaveChangesAsync();
+            await _notificationEmailService.TrySendAsync(
+                cancellationNotification.UserId,
+                cancellationNotification.NotificationId,
+                cancellationNotification.NotificationType,
+                cancellationNotification.Message);
 
             if (payment != null &&
                 refundAmount > 0 &&
@@ -1376,6 +1419,11 @@ namespace DIBA_Backend.Controllers
 
                 auditLog.LogDescription += $" Final refund status: {refundStatus}.";
                 await _dbContext.SaveChangesAsync();
+                await _notificationEmailService.TrySendAsync(
+                    cancellationNotification.UserId,
+                    cancellationNotification.NotificationId,
+                    cancellationNotification.NotificationType,
+                    cancellationNotification.Message);
             }
 
             return Ok(new

@@ -1,0 +1,44 @@
+name: DIBA Bookings CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, "feature/**", "fix/**"]
+
+concurrency:
+  group: diba-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Build ASP.NET Core API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Restore backend
+        run: dotnet restore Backend/DIBA_Backend/DIBA_Backend/DIBA_Backend.csproj
+      - name: Build backend
+        run: dotnet build Backend/DIBA_Backend/DIBA_Backend/DIBA_Backend.csproj --configuration Release --no-restore
+
+  frontend:
+    name: Build React frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install frontend dependencies
+        working-directory: diba-bookings-frontend
+        run: npm install --legacy-peer-deps
+      - name: Build frontend
+        working-directory: diba-bookings-frontend
+        env:
+          CI: "false"
+          NODE_OPTIONS: --openssl-legacy-provider
+          REACT_APP_API_BASE_URL: https://example.invalid/api
+        run: npm run build

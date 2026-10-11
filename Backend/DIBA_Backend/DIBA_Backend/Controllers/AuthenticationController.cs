@@ -1,7 +1,7 @@
 ﻿using DIBA_Backend.Data;
 using DIBA_Backend.Dto.Authentication;
 using DIBA_Backend.Models.Entities;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -27,6 +27,7 @@ namespace DIBA_Backend.Controllers
             _configuration = configuration;
         }
 
+        [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterUserDto registerUser)
         {
@@ -36,12 +37,18 @@ namespace DIBA_Backend.Controllers
             // DIBA adaptation: the email address is used to determine whether
             // the Event Organiser is already registered.
             // https://github.com/olaideogunbunmi/aspnetcore-auth-rbac
+            var email = registerUser.Email.Trim().ToLowerInvariant();
+            if (System.Text.Encoding.UTF8.GetByteCount(registerUser.Password) > 72)
+            {
+                return BadRequest("Password must not exceed 72 UTF-8 bytes.");
+            }
+
             var existingUser = await _dbContext.Users
-                .FirstOrDefaultAsync(user => user.Email == registerUser.Email);
+                .FirstOrDefaultAsync(user => user.Email == email);
 
             if (existingUser != null)
             {
-                return BadRequest("A user with this email already exists.");
+                return Conflict("A user with this email already exists.");
             }
 
 
@@ -67,9 +74,9 @@ namespace DIBA_Backend.Controllers
             var user = new User
             {
                 UserId = Guid.NewGuid(),
-                FirstName = registerUser.FirstName,
-                LastName = registerUser.LastName,
-                Email = registerUser.Email,
+                FirstName = registerUser.FirstName.Trim(),
+                LastName = registerUser.LastName.Trim(),
+                Email = email,
                 PasswordHash =
                     BCrypt.Net.BCrypt.HashPassword(registerUser.Password),
                 RoleId = eventOrganiserRole.RoleId
@@ -77,8 +84,21 @@ namespace DIBA_Backend.Controllers
 
             _dbContext.Users.Add(user);
 
-            // Save the new user to the database.
-            await _dbContext.SaveChangesAsync();
+            // The database unique index is the final guard against concurrent
+            // registrations using the same email address.
+            try
+            {
+                await _dbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                if (await _dbContext.Users.AsNoTracking().AnyAsync(user => user.Email == email))
+                {
+                    return Conflict("A user with this email already exists.");
+                }
+
+                throw;
+            }
 
             return Ok(new
             {
@@ -92,6 +112,7 @@ namespace DIBA_Backend.Controllers
         }
 
 
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto loginDto)
         {
@@ -101,9 +122,10 @@ namespace DIBA_Backend.Controllers
             // loaded because the role is required when generating the JWT.
             // Reference:
             // https://github.com/olaideogunbunmi/aspnetcore-auth-rbac
+            var email = loginDto.Email.Trim().ToLowerInvariant();
             var user = await _dbContext.Users
                 .Include(user => user.Role)
-                .FirstOrDefaultAsync(user => user.Email == loginDto.Email);
+                .FirstOrDefaultAsync(user => user.Email == email);
 
             if (user == null)
             {

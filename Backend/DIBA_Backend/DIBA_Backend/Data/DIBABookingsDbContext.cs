@@ -47,6 +47,8 @@ namespace DIBA_Backend.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<PrivacyRequest> PrivacyRequests { get; set; }
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<ProcessedYocoWebhook> ProcessedYocoWebhooks { get; set; }
+        public DbSet<EmailDeliveryLog> EmailDeliveryLogs { get; set; }
         public DbSet<Venue> Venues { get; set; }
         public DbSet<VenueFeature> VenueFeatures { get; set; }
 
@@ -54,6 +56,57 @@ namespace DIBA_Backend.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<User>()
+                .Property(user => user.Email)
+                .HasMaxLength(320)
+                .IsRequired();
+
+            modelBuilder.Entity<User>()
+                .HasIndex(user => user.Email)
+                .IsUnique();
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.PaymentStatus)
+                .HasMaxLength(30)
+                .IsRequired();
+
+            // Preserve failed attempts, but allow only one active payment per booking.
+            modelBuilder.Entity<Payment>()
+                .HasIndex(payment => payment.BookingId)
+                .IsUnique()
+                .HasFilter("[PaymentStatus] <> N'Failed'");
+
+            // Helps the venue/time conflict checks and serializable range locking.
+            modelBuilder.Entity<Booking>()
+                .HasIndex(booking => new
+                {
+                    booking.VenueId,
+                    booking.StartDateTime,
+                    booking.EndDateTime
+                });
+
+            modelBuilder.Entity<EmailDeliveryLog>()
+                .Property(log => log.RecipientEmail)
+                .HasMaxLength(320)
+                .IsRequired();
+
+            modelBuilder.Entity<EmailDeliveryLog>()
+                .Property(log => log.Subject)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            modelBuilder.Entity<EmailDeliveryLog>()
+                .Property(log => log.Status)
+                .HasMaxLength(20)
+                .IsRequired();
+
+            modelBuilder.Entity<EmailDeliveryLog>()
+                .Property(log => log.ErrorMessage)
+                .HasMaxLength(1000);
+
+            modelBuilder.Entity<EmailDeliveryLog>()
+                .HasIndex(log => log.AttemptedAtUtc);
 
 
             // =========================================================
@@ -526,6 +579,24 @@ namespace DIBA_Backend.Data
 
             modelBuilder.Entity<PrivacyRequest>()
                 .HasIndex(request => new { request.UserId, request.SubmittedAtUtc });
+
+            // =========================================================
+            // PROCESSED YOCO WEBHOOKS
+            // The primary key on WebhookId enforces duplicate protection
+            // at the database level, including concurrent deliveries.
+            // =========================================================
+            modelBuilder.Entity<ProcessedYocoWebhook>()
+                .HasKey(e => e.WebhookId);
+
+            modelBuilder.Entity<ProcessedYocoWebhook>()
+                .Property(e => e.WebhookId)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            modelBuilder.Entity<ProcessedYocoWebhook>()
+                .Property(e => e.EventType)
+                .HasMaxLength(100)
+                .IsRequired();
 
             // =========================================================
             // SEED ROLES
