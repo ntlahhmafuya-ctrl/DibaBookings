@@ -23,6 +23,8 @@ jobs:
         run: dotnet restore Backend/DIBA_Backend/DIBA_Backend/DIBA_Backend.csproj
       - name: Build backend
         run: dotnet build Backend/DIBA_Backend/DIBA_Backend/DIBA_Backend.csproj --configuration Release --no-restore
+      - name: Run backend integration tests
+        run: dotnet test Backend/DIBA_Backend/DIBA_Backend.Tests/DIBA_Backend.Tests.csproj --configuration Release
 
   frontend:
     name: Build React frontend
