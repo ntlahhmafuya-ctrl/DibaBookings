@@ -116,9 +116,12 @@ namespace DIBA_Backend.Services
             }
 
             var builder = new UriBuilder(uri);
-            var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
-            query[key] = value;
-            builder.Query = query.ToString();
+            var existingQuery = builder.Query.TrimStart('?')
+                .Split('&', StringSplitOptions.RemoveEmptyEntries)
+                .Where(part => !part.StartsWith(Uri.EscapeDataString(key) + "=", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            existingQuery.Add(Uri.EscapeDataString(key) + "=" + Uri.EscapeDataString(value));
+            builder.Query = string.Join("&", existingQuery);
             return builder.Uri.ToString();
         }
 
