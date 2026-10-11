@@ -70,6 +70,31 @@ public class AccountSecurityTests
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task LoginRateLimitRejectsExcessiveAttempts()
+    {
+        using var factory = new DibaApiFactory();
+        using var client = factory.CreateClient();
+
+        HttpResponseMessage? lastResponse = null;
+        for (var attempt = 1; attempt <= 11; attempt++)
+        {
+            lastResponse = await client.PostAsJsonAsync("/api/Authentication/login", new
+            {
+                Email = $"unknown-{attempt}@diba.example",
+                Password = "WrongPassword123!"
+            });
+
+            if (attempt < 11)
+            {
+                Assert.NotEqual(HttpStatusCode.TooManyRequests, lastResponse.StatusCode);
+            }
+        }
+
+        Assert.NotNull(lastResponse);
+        Assert.Equal(HttpStatusCode.TooManyRequests, lastResponse!.StatusCode);
+    }
+
     private static async Task<string> LoginAsync(HttpClient client, string password)
     {
         var response = await client.PostAsJsonAsync("/api/Authentication/login", new
