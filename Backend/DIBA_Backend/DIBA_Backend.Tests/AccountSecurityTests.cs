@@ -1,0 +1,141 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using DIBA_Backend.Data;
+using DIBA_Backend.Models.Entities;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+namespace DIBA_Backend.Tests;
+
+public class AccountSecurityTests
+{
+    private const string TestEmail = "security-test@diba.example";
+    private const string OriginalPassword = "CurrentPassword123!";
+    private const string NewPassword = "ACompletelyNewPassword456!";
+
+    [Fact]
+    public async Task PasswordChangeInvalidatesOldTokenAndNewLoginWorks()
+    {
+        using var factory = new DibaApiFactory();
+        using var client = factory.CreateClient();
+        var userId = await SeedUserAsync(factory);
+
+        var token = await LoginAsync(client, OriginalPassword);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var changeResponse = await client.PostAsJsonAsync("/api/Account/change-password", new
+        {
+            CurrentPassword = OriginalPassword,
+            NewPassword
+        });
+        Assert.Equal(HttpStatusCode.OK, changeResponse.StatusCode);
+
+        var oldTokenResponse = await client.GetAsync("/api/Users/me");
+        Assert.Equal(HttpStatusCode.Unauthorized, oldTokenResponse.StatusCode);
+
+        client.DefaultRequestHeaders.Authorization = null;
+        var newToken = await LoginAsync(client, NewPassword);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", newToken);
+
+        var newTokenResponse = await client.GetAsync("/api/Users/me");
+        Assert.Equal(HttpStatusCode.OK, newTokenResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeactivatingAccountInvalidatesPreviouslyIssuedToken()
+    {
+        using var factory = new DibaApiFactory();
+        using var client = factory.CreateClient();
+        var userId = await SeedUserAsync(factory);
+
+        var token = await LoginAsync(client, OriginalPassword);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DIBABookingsDbContext>();
+            var user = await db.Users.SingleAsync(item => item.UserId == userId);
+            user.IsActive = false;
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync("/api/Users/me");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    private static async Task<string> LoginAsync(HttpClient client, string password)
+    {
+        var response = await client.PostAsJsonAsync("/api/Authentication/login", new
+        {
+            Email = TestEmail,
+            Password = password
+        });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.GetProperty("token").GetString()
+            ?? throw new InvalidOperationException("Login response did not include a token.");
+    }
+
+    private static async Task<Guid> SeedUserAsync(DibaApiFactory factory)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DIBABookingsDbContext>();
+        await db.Database.EnsureCreatedAsync();
+
+        var role = new Role
+        {
+            RoleId = Guid.NewGuid(),
+            RoleName = "Event Organiser"
+        };
+        var user = new User
+        {
+            UserId = Guid.NewGuid(),
+            FirstName = "Security",
+            LastName = "Test",
+            Email = TestEmail,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(OriginalPassword),
+            RoleId = role.RoleId,
+            Role = role,
+            IsActive = true
+        };
+
+        db.Roles.Add(role);
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+        return user.UserId;
+    }
+
+    private sealed class DibaApiFactory : WebApplicationFactory<Program>
+    {
+        private readonly string _databaseName = $"DibaSecurityTests-{Guid.NewGuid():N}";
+
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureAppConfiguration((_, configuration) =>
+            {
+                configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Jwt:Key"] = "DIBA-Test-Signing-Key-At-Least-32-Bytes!",
+                    ["Jwt:Issuer"] = "DIBA.Security.Tests",
+                    ["Jwt:Audience"] = "DIBA.Security.Tests",
+                    ["ConnectionStrings:DbConn"] = "Server=localhost;Database=DibaTests;Trusted_Connection=True;TrustServerCertificate=True"
+                });
+            });
+
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<DbContextOptions<DIBABookingsDbContext>>();
+                services.AddDbContext<DIBABookingsDbContext>(options =>
+                    options.UseInMemoryDatabase(_databaseName));
+            });
+        }
+    }
+}
