@@ -7,8 +7,22 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Apply a per-client-IP limit to expensive anonymous authentication attempts.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("login", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 10;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueLimit = 0;
+        limiterOptions.AutoReplenishment = true;
+    });
+});
 
 builder.Services.AddHttpClient<YocoPaymentService>();
 builder.Services.AddScoped<NotificationEmailService>();
@@ -165,7 +179,9 @@ if (app.Environment.IsDevelopment())
     //await DbSeeder.SeedAsync(dbContext);
 }
 
+app.UseRouting();
 app.UseCors("MyPolicy");
+app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {
