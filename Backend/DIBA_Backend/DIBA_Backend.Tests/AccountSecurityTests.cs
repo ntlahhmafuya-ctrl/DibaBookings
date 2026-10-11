@@ -77,9 +77,11 @@ public class AccountSecurityTests
             Email = TestEmail,
             Password = password
         });
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var responseBody = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK,
+            $"Login failed with {(int)response.StatusCode} {response.StatusCode}: {responseBody}");
 
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var document = JsonDocument.Parse(responseBody);
         return document.RootElement.GetProperty("token").GetString()
             ?? throw new InvalidOperationException("Login response did not include a token.");
     }
